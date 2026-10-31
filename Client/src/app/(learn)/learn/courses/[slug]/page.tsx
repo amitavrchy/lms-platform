@@ -1,0 +1,161 @@
+"use client";
+
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { CheckCircle2, Circle, Play } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ProgressBar } from "@/components/ui/progress";
+
+type Lesson = {
+  id: string;
+  title: string;
+  slug: string;
+  type: string;
+  durationSec: number;
+  completed?: boolean;
+};
+
+type Module = {
+  id: string;
+  title: string;
+  sortOrder: number;
+  lessons: Lesson[];
+};
+
+type CourseDetail = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+  descriptionMd?: string | null;
+  level?: string | null;
+  durationMins: number;
+  enrolled?: boolean;
+  progressPercent?: number;
+  modules: Module[];
+};
+
+export default function CourseOutlinePage() {
+  const { slug } = useParams<{ slug: string }>();
+  const router = useRouter();
+  const qc = useQueryClient();
+
+  const { data: course, isLoading } = useQuery({
+    queryKey: queryKeys.catalog.course(slug),
+    queryFn: async () => (await api.get<CourseDetail>(`/catalog/courses/${slug}`)).data,
+  });
+
+  const enroll = useMutation({
+    mutationFn: async () => {
+      if (!course) return;
+      await api.post("/enrollments", { courseId: course.id });
+    },
+    onSuccess: () => {
+      toast.success("Enrolled — streak awaits");
+      void qc.invalidateQueries({ queryKey: queryKeys.catalog.course(slug) });
+      void qc.invalidateQueries({ queryKey: queryKeys.enrollments });
+    },
+    onError: () => toast.error("Could not enroll"),
+  });
+
+  if (isLoading || !course) {
+    return <div className="h-64 animate-pulse rounded-2xl bg-[var(--surface)]" />;
+  }
+
+  const firstLesson = course.modules.flatMap((m) => m.lessons)[0];
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="mb-3 flex flex-wrap gap-2">
+          {course.level && <Badge tone="accent">{course.level}</Badge>}
+          <Badge>{course.durationMins} mins</Badge>
+        </div>
+        <h1 className="font-[family-name:var(--font-display)] text-[32px] font-bold tracking-tight">
+          {course.title}
+        </h1>
+        {course.subtitle && <p className="mt-2 text-[16px] text-[var(--muted)]">{course.subtitle}</p>}
+        {course.enrolled && (
+          <div className="mt-4">
+            <ProgressBar value={course.progressPercent ?? 0} />
+            <p className="mt-2 text-[14px] text-[var(--muted)]">{course.progressPercent ?? 0}% complete</p>
+          </div>
+        )}
+        <div className="mt-6 flex flex-wrap gap-3">
+          {course.enrolled ? (
+            firstLesson && (
+              <Button
+                onClick={() =>
+                  router.push(`/learn/courses/${course.slug}/lessons/${firstLesson.id}`)
+                }
+              >
+                <Play className="h-4 w-4" />
+                Continue
+              </Button>
+            )
+          ) : (
+            <Button onClick={() => enroll.mutate()} disabled={enroll.isPending}>
+              {enroll.isPending ? "Enrolling…" : "Enroll free"}
+            </Button>
+          )}
+        </div>
+      </motion.div>
+
+      <div className="mt-10 space-y-6">
+        {course.modules
+          .slice()
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((mod, mi) => (
+            <motion.section
+              key={mod.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: mi * 0.05 }}
+              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
+            >
+              <h2 className="text-[16px] font-semibold">
+                Module {mi + 1}: {mod.title}
+              </h2>
+              <ul className="mt-4 space-y-2">
+                {mod.lessons
+                  .slice()
+                  .sort((a, b) => 0)
+                  .map((lesson) => (
+                    <li key={lesson.id}>
+                      <Link
+                        href={
+                          course.enrolled
+                            ? `/learn/courses/${course.slug}/lessons/${lesson.id}`
+                            : "#"
+                        }
+                        onClick={(e) => {
+                          if (!course.enrolled) {
+                            e.preventDefault();
+                            toast.message("Enroll to open lessons");
+                          }
+                        }}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] transition hover:bg-[var(--surface-2)]"
+                      >
+                        {lesson.completed ? (
+                          <CheckCircle2 className="h-4 w-4 text-[var(--success)]" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-[var(--muted)]" />
+                        )}
+                        <span className="flex-1">{lesson.title}</span>
+                        <Badge tone="default">{lesson.type}</Badge>
+                      </Link>
+                    </li>
+                  ))}
+              </ul>
+            </motion.section>
+          ))}
+      </div>
+    </div>
+  );
+}
