@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,3 +7,250 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum OrgRole {
+  OWNER
+  ADMIN
+  INSTRUCTOR
+  TA
+  LEARNER
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LessonType {
+  VIDEO
+  ARTICLE
+  QUIZ
+}
+
+enum QuestionType {
+  SINGLE
+  MULTI
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  REVOKED
+}
+
+model Organization {
+  id        String         @id @default(cuid())
+  name      String
+  slug      String         @unique
+  logoUrl   String?
+  members   Membership[]
+  courses   Course[]
+  paths     LearningPath[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model User {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  passwordHash String
+  name         String
+  avatarUrl    String?
+  memberships  Membership[]
+  enrollments  Enrollment[]
+  progress     LessonProgress[]
+  quizAttempts QuizAttempt[]
+  streak       UserStreak?
+  xpEvents     XpEvent[]
+  certificates Certificate[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrgRole      @default(LEARNER)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Course {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  slug           String
+  title          String
+  subtitle       String?
+  descriptionMd  String?
+  coverUrl       String?
+  status         CourseStatus   @default(DRAFT)
+  level          String?
+  durationMins   Int            @default(0)
+  modules        Module[]
+  enrollments    Enrollment[]
+  certificates   Certificate[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([organizationId, slug])
+  @@index([status])
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  sortOrder Int      @default(0)
+  lessons   Lesson[]
+
+  @@index([courseId])
+}
+
+model Lesson {
+  id          String           @id @default(cuid())
+  moduleId    String
+  module      Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String
+  type        LessonType       @default(VIDEO)
+  contentMd   String?
+  videoUrl    String?
+  durationSec Int              @default(0)
+  sortOrder   Int              @default(0)
+  quiz        Quiz?
+  progress    LessonProgress[]
+
+  @@unique([moduleId, slug])
+  @@index([moduleId])
+}
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  courseId    String
+  userId      String
+  status      EnrollmentStatus @default(ACTIVE)
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, userId])
+  @@index([userId])
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  lessonId    String
+  userId      String
+  completed   Boolean   @default(false)
+  positionSec Int       @default(0)
+  completedAt DateTime?
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, userId])
+  @@index([userId])
+}
+
+model Quiz {
+  id        String        @id @default(cuid())
+  lessonId  String        @unique
+  lesson    Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title     String
+  passScore Int           @default(70)
+  questions Question[]
+  attempts  QuizAttempt[]
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  quizId        String
+  quiz          Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  type          QuestionType @default(SINGLE)
+  promptMd      String
+  optionsJson   Json
+  sortOrder     Int          @default(0)
+  explanationMd String?
+
+  @@index([quizId])
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  quizId      String
+  userId      String
+  score       Int
+  passed      Boolean
+  answersJson Json
+  createdAt   DateTime @default(now())
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, userId])
+}
+
+model UserStreak {
+  userId         String    @id
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActiveDate DateTime?
+  xpTotal        Int       @default(0)
+  dailyGoalXp    Int       @default(30)
+  dailyXpEarned  Int       @default(0)
+  dailyGoalDate  DateTime?
+}
+
+model XpEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model LearningPath {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  slug           String
+  title          String
+  descriptionMd  String?
+  courseIds      String[]
+  coverUrl       String?
+
+  @@unique([organizationId, slug])
+}
+
+model Certificate {
+  id       String   @id @default(cuid())
+  courseId String
+  userId   String
+  code     String   @unique
+  issuedAt DateTime @default(now())
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, userId])
+}
+
+model ContentChunkMeta {
+  id             String   @id @default(cuid())
+  organizationId String
+  courseId       String
+  lessonId       String
+  chromaId       String
+  createdAt      DateTime @default(now())
+
+  @@index([lessonId])
+  @@index([courseId])
+}
