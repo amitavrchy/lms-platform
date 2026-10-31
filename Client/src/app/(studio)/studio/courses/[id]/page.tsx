@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -28,12 +29,9 @@ import { Badge } from "@/components/ui/badge";
 import { ModuleBlock, slugify } from "@/components/curriculum/ModuleBlock";
 import type { StudioCourse } from "@/components/curriculum/types";
 
-export default function CurriculumBuilderPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function CurriculumBuilderPage() {
+  const params = useParams<{ id: string }>();
+  const id = params.id;
   const qc = useQueryClient();
   const [moduleTitle, setModuleTitle] = useState("");
 

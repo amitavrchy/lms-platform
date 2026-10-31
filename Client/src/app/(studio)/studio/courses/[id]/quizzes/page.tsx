@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, Plus } from "lucide-react";
@@ -15,12 +16,9 @@ import type { StudioCourse, StudioLesson } from "@/components/curriculum/types";
 
 type LessonOption = StudioLesson & { moduleTitle: string };
 
-export default function StudioQuizzesPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function StudioQuizzesPage() {
+  const params = useParams<{ id: string }>();
+  const id = params.id;
   const qc = useQueryClient();
   const [lessonId, setLessonId] = useState("");
   const [title, setTitle] = useState("");

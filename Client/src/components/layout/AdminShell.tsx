@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -16,11 +17,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const hydrated = useAppSelector((s) => s.auth.hydrated);
   const canAdmin = user && ["OWNER", "ADMIN"].includes(user.role);
 
-  if (hydrated && !user) {
-    router.replace("/login");
-  } else if (hydrated && user && !canAdmin) {
-    router.replace("/learn");
-  }
+  useEffect(() => {
+    if (hydrated && !user) router.replace("/login");
+    else if (hydrated && user && !canAdmin) router.replace("/learn");
+  }, [hydrated, user, canAdmin, router]);
+
 
   return (
     <div className="flex min-h-full bg-[var(--bg)]">

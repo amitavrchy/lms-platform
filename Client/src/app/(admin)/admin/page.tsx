@@ -3,173 +3,221 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
+import { UserPlus } from "lucide-react";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import type { StudioCourseListItem } from "@/components/curriculum/types";
 
 type Member = {
   id: string;
   role: string;
-  user: { id: string; name: string; email: string };
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl?: string | null;
+    createdAt: string;
+  };
 };
 
-type Report = {
-  seatsUsed?: number;
-  memberCount?: number;
-  coursesPublished?: number;
-  enrollmentsActive?: number;
-  [key: string]: unknown;
+type Reports = {
+  seatsUsed: number;
+  coursesTotal: number;
+  coursesPublished: number;
+  enrollments: number;
+  completions: number;
 };
 
-type StudioCourse = { id: string; title: string; status: string };
+const ROLES = ["OWNER", "ADMIN", "INSTRUCTOR", "TA", "LEARNER"] as const;
 
 export default function AdminPage() {
   const qc = useQueryClient();
   const [courseId, setCourseId] = useState("");
-  const [userIds, setUserIds] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [assignMsg, setAssignMsg] = useState<string | null>(null);
 
-  const members = useQuery({
+  const membersQuery = useQuery({
     queryKey: queryKeys.admin.members,
     queryFn: async () => (await api.get<Member[]>("/admin/members")).data,
   });
 
-  const reports = useQuery({
+  const reportsQuery = useQuery({
     queryKey: queryKeys.admin.reports,
-    queryFn: async () => (await api.get<Report>("/admin/reports")).data,
+    queryFn: async () => (await api.get<Reports>("/admin/reports")).data,
   });
 
-  const courses = useQuery({
+  const coursesQuery = useQuery({
     queryKey: queryKeys.studio.courses,
-    queryFn: async () => (await api.get<StudioCourse[]>("/studio/courses")).data,
-  });
-
-  const published = useMemo(
-    () => courses.data?.filter((c) => c.status === "PUBLISHED") ?? [],
-    [courses.data],
-  );
-
-  const assign = useMutation({
-    mutationFn: async () =>
-      api.post("/admin/enrollments/assign", {
-        courseId,
-        userIds: userIds
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-      }),
-    onSuccess: () => {
-      toast.success("Courses assigned");
-      void qc.invalidateQueries({ queryKey: queryKeys.admin.reports });
-    },
-    onError: () => toast.error("Assign failed"),
+    queryFn: async () => (await api.get<StudioCourseListItem[]>("/studio/courses")).data,
   });
 
   const updateRole = useMutation({
     mutationFn: async ({ membershipId, role }: { membershipId: string; role: string }) =>
-      api.patch(`/admin/members/${membershipId}/role`, { role }),
-    onSuccess: () => {
-      toast.success("Role updated");
-      void qc.invalidateQueries({ queryKey: queryKeys.admin.members });
-    },
-    onError: () => toast.error("Role update failed"),
+      (await api.patch(`/admin/members/${membershipId}/role`, { role })).data,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.admin.members }),
   });
 
+  const assign = useMutation({
+    mutationFn: async () =>
+      (
+        await api.post("/admin/enrollments/assign", {
+          courseId,
+          userIds: Array.from(selectedUserIds),
+        })
+      ).data as { courseId: string; results: { userId: string; ok: boolean; reason?: string }[] },
+    onSuccess: (data) => {
+      const ok = data.results.filter((r) => r.ok).length;
+      const fail = data.results.length - ok;
+      setAssignMsg(`Assigned ${ok} learner(s)${fail ? `, ${fail} skipped` : ""}.`);
+      setSelectedUserIds(new Set());
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.reports });
+    },
+  });
+
+  const members = membersQuery.data ?? [];
+  const reports = reportsQuery.data;
+
+  const reportCards = useMemo(
+    () =>
+      reports
+        ? [
+            { label: "Seats used", value: reports.seatsUsed },
+            { label: "Courses", value: reports.coursesTotal },
+            { label: "Published", value: reports.coursesPublished },
+            { label: "Enrollments", value: reports.enrollments },
+            { label: "Completions", value: reports.completions },
+          ]
+        : [],
+    [reports],
+  );
+
+  function toggleUser(userId: string) {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }
+
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto max-w-5xl space-y-10">
       <div>
-        <h1 className="font-[family-name:var(--font-display)] text-[32px] font-bold">Org admin</h1>
-        <p className="mt-2 text-[16px] text-[var(--muted)]">
-          Members, seat usage, and course assignments.
-        </p>
+        <motion.h1
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="font-[family-name:var(--font-display)] text-[32px] font-bold tracking-tight"
+        >
+          Organization admin
+        </motion.h1>
+        <p className="mt-2 text-[16px] text-[var(--muted)]">Members, enrollments, and org reports.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {[
-          ["Members", reports.data?.memberCount ?? reports.data?.seatsUsed ?? "—"],
-          ["Published", reports.data?.coursesPublished ?? "—"],
-          ["Active enrollments", reports.data?.enrollmentsActive ?? "—"],
-        ].map(([label, value], i) => (
-          <motion.div
-            key={label}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4"
-          >
-            <p className="text-[14px] text-[var(--muted)]">{label}</p>
-            <p className="mt-1 font-[family-name:var(--font-display)] text-[28px] font-bold">
-              {String(value)}
-            </p>
-          </motion.div>
-        ))}
-      </div>
+      <section>
+        <h2 className="mb-4 text-[20px] font-semibold">Reports</h2>
+        {reportsQuery.isLoading && <p className="text-[14px] text-[var(--muted)]">Loading…</p>}
+        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {reportCards.map((c, i) => (
+            <motion.div
+              key={c.label}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4"
+            >
+              <p className="text-[14px] text-[var(--muted)]">{c.label}</p>
+              <p className="mt-1 font-[family-name:var(--font-display)] text-[26px] font-bold">{c.value}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-        <h2 className="text-[16px] font-semibold">Assign course</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <section className="space-y-4">
+        <h2 className="text-[20px] font-semibold">Assign course</h2>
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-4">
           <div>
-            <Label>Course</Label>
+            <Label htmlFor="assign-course">Course</Label>
             <select
-              className="mt-1.5 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-[14px]"
+              id="assign-course"
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
+              className="flex h-11 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--bg)] px-4 text-[14px]"
             >
-              <option value="">Select…</option>
-              {published.map((c) => (
+              <option value="">Select course…</option>
+              {(coursesQuery.data ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.title}
+                  {c.title} ({c.status})
                 </option>
               ))}
             </select>
           </div>
-          <div>
-            <Label>User IDs (comma-separated)</Label>
-            <Input value={userIds} onChange={(e) => setUserIds(e.target.value)} placeholder="cuid, cuid" />
-          </div>
+          <p className="text-[14px] text-[var(--muted)]">
+            Select members below, then assign. Selected: {selectedUserIds.size}
+          </p>
+          <Button
+            disabled={!courseId || selectedUserIds.size === 0 || assign.isPending}
+            onClick={() => {
+              setAssignMsg(null);
+              assign.mutate();
+            }}
+          >
+            <UserPlus className="h-4 w-4" />
+            {assign.isPending ? "Assigning…" : "Assign enrollments"}
+          </Button>
+          {assign.isError && (
+            <p className="text-[14px] text-[var(--danger)]">Assign failed.</p>
+          )}
+          {assignMsg && <p className="text-[14px] text-[var(--success)]">{assignMsg}</p>}
         </div>
-        <Button
-          className="mt-4"
-          disabled={!courseId || !userIds || assign.isPending}
-          onClick={() => assign.mutate()}
-        >
-          Assign enrollments
-        </Button>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[16px] font-semibold">Members</h2>
-        {members.data?.map((m) => (
-          <div
-            key={m.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4"
-          >
-            <div>
-              <p className="text-[14px] font-medium">{m.user.name}</p>
-              <p className="text-[14px] text-[var(--muted)]">{m.user.email}</p>
-              <p className="mt-1 font-mono text-[14px] text-[var(--muted)]">{m.user.id}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge>{m.role}</Badge>
+        <h2 className="text-[20px] font-semibold">Members</h2>
+        {membersQuery.isLoading && <p className="text-[14px] text-[var(--muted)]">Loading members…</p>}
+        <div className="space-y-2">
+          {members.map((m, i) => (
+            <motion.div
+              key={m.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.03, 0.3) }}
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
+            >
+              <label className="flex cursor-pointer items-center gap-3 min-w-0 flex-1">
+                <input
+                  type="checkbox"
+                  checked={selectedUserIds.has(m.user.id)}
+                  onChange={() => toggleUser(m.user.id)}
+                  className="h-4 w-4 accent-[var(--accent)]"
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-medium">{m.user.name}</p>
+                  <p className="truncate text-[14px] text-[var(--muted)]">{m.user.email}</p>
+                </div>
+              </label>
+              <Badge tone={m.role === "OWNER" || m.role === "ADMIN" ? "accent" : "default"}>
+                {m.role}
+              </Badge>
               <select
-                className="h-10 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-2 text-[14px]"
                 value={m.role}
+                disabled={m.role === "OWNER" || updateRole.isPending}
                 onChange={(e) =>
                   updateRole.mutate({ membershipId: m.id, role: e.target.value })
                 }
+                className="h-10 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-[14px] disabled:opacity-50"
               >
-                {["OWNER", "ADMIN", "INSTRUCTOR", "TA", "LEARNER"].map((r) => (
-                  <option key={r} value={r}>
+                {ROLES.map((r) => (
+                  <option key={r} value={r} disabled={r === "OWNER" && m.role !== "OWNER"}>
                     {r}
                   </option>
                 ))}
               </select>
-            </div>
-          </div>
-        ))}
+            </motion.div>
+          ))}
+        </div>
       </section>
     </div>
   );
