@@ -10,6 +10,28 @@ Production-oriented academic and cohort LMS — **Finish what you start.**
 | Server | NestJS ESM, Prisma 6, Postgres 16, JWT, Swagger |
 | AI | FastAPI, LangChain/OpenAI, Chroma (mock mode without API key) |
 
+## Workspace structure
+
+All project files live inside these service directories. Git metadata remains at the repository root.
+
+```text
+lms-platform/
+  ai/          FastAPI service, Python environment, AI documentation
+  Client/      Next.js application, frontend configuration and assets
+  Server/      NestJS API, Prisma, Docker Compose, scripts and project documentation
+```
+
+This guide uses commands from the repository root unless a service directory is explicitly selected. Component guides: [API](../README.md), [Client](../../Client/README.md), [AI](../../ai/README.md).
+
+For an already configured Windows checkout, start all three services with:
+
+```powershell
+cd Server
+npm run dev:all
+```
+
+The launcher resolves every service path from its own location, starts missing services in the background, and checks their HTTP endpoints. Logs are written inside each service's ignored `.logs` directory. It reuses services already listening on the expected ports.
+
 ## Quick start
 
 ### 1. Database
@@ -17,7 +39,7 @@ Production-oriented academic and cohort LMS — **Finish what you start.**
 Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or any Postgres 16), then:
 
 ```bash
-docker compose up -d
+docker compose -f Server/docker-compose.yml up -d
 ```
 
 ### 2. Server
@@ -81,6 +103,7 @@ Org slug: `learnora`
 
 ## Product surfaces
 
+- `/courses/[slug]` public syllabus preview with enrollment and authentication return flow
 - `/` marketing · `/courses` catalog · `/login` `/register`
 - `/learn` learner home, player, quizzes, streaks, certificates, cohorts, announcements, and course Q&A
 - `/studio` curriculum builder, cohorts, community moderation, analytics, and AI tools
@@ -108,3 +131,23 @@ Never enable a production webhook without its signing secret. Free/demo enrollme
 ## Repo
 
 https://github.com/amitavrchy/lms-platform
+
+
+## Interface and content refresh
+
+Public pages use a warm academic palette, shared course illustrations, accessible navigation, and a 90% content container. Learner, Studio, and Admin workspaces use 90% of their available content area. The catalog supports search, category and duration filters, sorting, and shareable filter URLs.
+
+The academic library contains 42 authored readings/checkpoints across five courses (four published, one draft). Each reading includes a concept explanation, worked example, practice activity, and reflection. The four published courses have distinct scenario-based assessments. Demo readings use article delivery rather than unrelated sample videos.
+
+To update an existing local demo database without resetting learner records:
+
+```powershell
+cd Server
+npx tsx prisma/update-academic-content.ts
+```
+
+This updates only the known Learnora demo courses. Enrollment, lesson progress, assessment attempts, certificates, and existing IDs are preserved. The full seed command remains intended for initializing/resetting demo data.
+
+Course discussion posts and replies, announcement read states and publishing, cohort creation/editing, session scheduling, roster assignment, notification preferences, and module release schedules are connected to their API contracts. Quiz lessons require a passing attempt before completion; certificates require all lessons and assessments. Lessons can advance across available modules.
+
+Validation: `npm run lint` and `npm run build` in Client; `npm test` and `npm run build` in Server. Live AI responses and paid checkout still depend on the AI service and Stripe configuration described above.

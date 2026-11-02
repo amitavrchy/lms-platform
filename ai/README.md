@@ -63,3 +63,9 @@ uvicorn app.main:app --reload --port 8002
 | `CHROMA_PATH` | Persistent Chroma directory (`./chroma`) |
 | `CLIENT_ORIGIN` | CORS origin(s), comma-separated |
 | `DATABASE_URL` | Reserved for future SQL use |
+
+## Workspace launcher
+
+This directory contains all AI service files, including its own environment, ignored Python cache, Chroma data, and runtime logs. Shared project documentation is in [Server/docs/PROJECT.md](../Server/docs/PROJECT.md).
+
+After all three service environments are configured, run `npm run dev:all` from `Server/` on Windows to start the client, NestJS API, and this FastAPI service. The launcher uses `ai/.venv/Scripts/python.exe` and the `ai/` working directory, so relative `.env` and Chroma paths resolve correctly.

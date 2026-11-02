@@ -4,3 +4,11 @@ __pycache__
 chroma/
 *.pyc
 .pytest_cache/
+
+# Local runtime files
+.env.*
+!.env.example
+*.log
+.DS_Store
+.logs/
+.artifacts/

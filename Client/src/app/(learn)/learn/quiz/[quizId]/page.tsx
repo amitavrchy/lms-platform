@@ -31,11 +31,15 @@ export default function QuizPage() {
   const { quizId } = useParams<{ quizId: string }>();
   const router = useRouter();
   const qc = useQueryClient();
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [result, setResult] = useState<{
     score: number;
     passed: boolean;
-    breakdown: { questionId: string; correct: boolean; explanationMd: string | null }[];
+    breakdown: {
+      questionId: string;
+      correct: boolean;
+      explanationMd: string | null;
+    }[];
     xp?: { awarded: number } | null;
   } | null>(null);
 
@@ -46,9 +50,8 @@ export default function QuizPage() {
 
   const submit = useMutation({
     mutationFn: async () =>
-      (
-        await api.post(`/quizzes/${quizId}/attempts`, { answers })
-      ).data as typeof result,
+      (await api.post(`/quizzes/${quizId}/attempts`, { answers }))
+        .data as typeof result,
     onSuccess: (data) => {
       setResult(data);
       void qc.invalidateQueries({ queryKey: queryKeys.streak });
@@ -64,10 +67,28 @@ export default function QuizPage() {
 
   const quiz = quizQuery.data;
 
-  if (quizQuery.isLoading || !quiz) {
-    return <div className="h-64 animate-pulse rounded-2xl bg-[var(--surface)]" />;
+  if (quizQuery.isLoading) {
+    return (
+      <div className="h-64 animate-pulse rounded-2xl bg-[var(--surface)]" />
+    );
   }
 
+  if (!quiz)
+    return (
+      <div className="rounded-xl border bg-[var(--surface)] p-6">
+        <h1 className="text-2xl">This quiz is unavailable.</h1>
+        <p className="mt-3 text-sm text-[var(--muted)]">
+          Check your enrollment and module release schedule.
+        </p>
+        <Button
+          className="mt-5"
+          variant="secondary"
+          onClick={() => router.back()}
+        >
+          Back to lesson
+        </Button>
+      </div>
+    );
   return (
     <div className="mx-auto max-w-2xl">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -75,12 +96,16 @@ export default function QuizPage() {
         <h1 className="mt-3 font-[family-name:var(--font-display)] text-[28px] font-bold">
           {quiz.title}
         </h1>
-        <p className="mt-2 text-[14px] text-[var(--muted)]">Pass score: {quiz.passScore}%</p>
+        <p className="mt-2 text-[14px] text-[var(--muted)]">
+          Pass score: {quiz.passScore}%
+        </p>
       </motion.div>
 
       <div className="mt-8 space-y-6">
         {quiz.questions.map((q, i) => {
-          const breakdown = result?.breakdown.find((b) => b.questionId === q.id);
+          const breakdown = result?.breakdown.find(
+            (b) => b.questionId === q.id,
+          );
           return (
             <motion.div
               key={q.id}
@@ -91,16 +116,39 @@ export default function QuizPage() {
             >
               <p className="text-[15px] font-medium">
                 {i + 1}. {q.promptMd}
+                {q.type === "MULTI" && (
+                  <span className="mt-1 block text-sm font-normal text-[var(--muted)]">
+                    Select all that apply.
+                  </span>
+                )}
               </p>
               <div className="mt-4 space-y-2">
                 {q.options.map((opt) => {
-                  const selected = answers[q.id] === opt.id;
+                  const response = answers[q.id];
+                  const selected = Array.isArray(response)
+                    ? response.includes(opt.id)
+                    : response === opt.id;
                   return (
                     <button
                       key={opt.id}
                       type="button"
                       disabled={Boolean(result)}
-                      onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt.id }))}
+                      aria-pressed={selected}
+                      onClick={() =>
+                        setAnswers((a) => {
+                          if (q.type !== "MULTI")
+                            return { ...a, [q.id]: opt.id };
+                          const previous = Array.isArray(a[q.id])
+                            ? (a[q.id] as string[])
+                            : [];
+                          return {
+                            ...a,
+                            [q.id]: previous.includes(opt.id)
+                              ? previous.filter((id) => id !== opt.id)
+                              : [...previous, opt.id],
+                          };
+                        })
+                      }
                       className={cn(
                         "flex w-full items-center rounded-xl border px-4 py-3 text-left text-[14px] transition",
                         selected
@@ -138,7 +186,15 @@ export default function QuizPage() {
         {!result ? (
           <Button
             onClick={() => submit.mutate()}
-            disabled={submit.isPending || Object.keys(answers).length < quiz.questions.length}
+            disabled={
+              submit.isPending ||
+              !quiz.questions.length ||
+              quiz.questions.some(
+                (q) =>
+                  !answers[q.id] ||
+                  (Array.isArray(answers[q.id]) && answers[q.id].length === 0),
+              )
+            }
           >
             {submit.isPending ? "Grading…" : "Submit answers"}
           </Button>
@@ -147,6 +203,16 @@ export default function QuizPage() {
             <Badge tone={result.passed ? "success" : "danger"}>
               {result.passed ? "Passed" : "Not passed"} · {result.score}%
             </Badge>
+            {!result.passed && (
+              <Button
+                onClick={() => {
+                  setResult(null);
+                  setAnswers({});
+                }}
+              >
+                Try again
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => router.back()}>
               Back to lesson
             </Button>

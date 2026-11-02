@@ -16,6 +16,7 @@ export type StudioLesson = {
 };
 
 export type StudioModule = {
+  releaseOffsetDays?: number;
   id: string;
   title: string;
   sortOrder: number;

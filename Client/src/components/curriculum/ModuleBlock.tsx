@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 import {
   DndContext,
   closestCenter,
@@ -36,12 +39,14 @@ type Props = {
 };
 
 function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 64) || "lesson";
+  return (
+    s
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 64) || "lesson"
+  );
 }
 
 export function ModuleBlock({
@@ -54,19 +59,41 @@ export function ModuleBlock({
   onDeleteLesson,
   onDeleteModule,
 }: Props) {
+  const client = useQueryClient();
+  const [releaseDays, setReleaseDays] = useState(module.releaseOffsetDays ?? 0);
+  const release = useMutation({
+    mutationFn: () =>
+      api.patch(`/studio/modules/${module.id}`, {
+        releaseOffsetDays: releaseDays,
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries({
+        queryKey: queryKeys.studio.course(courseId),
+      });
+    },
+  });
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(module.title);
   const [lessonTitle, setLessonTitle] = useState("");
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: module.id,
   });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const style = {
@@ -143,7 +170,12 @@ export function ModuleBlock({
               className="h-9"
               autoFocus
             />
-            <Button size="sm" variant="secondary" disabled={saving} onClick={() => void saveTitle()}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={saving}
+              onClick={() => void saveTitle()}
+            >
               <Check className="h-4 w-4" />
             </Button>
             <Button
@@ -160,7 +192,12 @@ export function ModuleBlock({
         ) : (
           <>
             <h3 className="flex-1 text-[16px] font-semibold">{module.title}</h3>
-            <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label="Rename module">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setEditing(true)}
+              aria-label="Rename module"
+            >
               <Pencil className="h-4 w-4" />
             </Button>
             {onDeleteModule && (
@@ -177,8 +214,51 @@ export function ModuleBlock({
         )}
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => void onLessonDragEnd(e)}>
-        <SortableContext items={module.lessons.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+      <form
+        className="mb-4 flex flex-wrap items-center gap-3 text-sm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          release.mutate();
+        }}
+      >
+        <label className="flex items-center gap-2">
+          Open after{" "}
+          <input
+            type="number"
+            min={0}
+            required
+            aria-label={`Release delay for ${module.title}`}
+            value={releaseDays}
+            onChange={(e) => setReleaseDays(Number(e.target.value))}
+            className="h-9 w-20 rounded-lg border bg-[var(--surface)] px-2"
+          />{" "}
+          days from cohort start
+        </label>
+        <Button
+          size="sm"
+          variant="ghost"
+          type="submit"
+          disabled={
+            release.isPending || releaseDays === (module.releaseOffsetDays ?? 0)
+          }
+        >
+          Save schedule
+        </Button>
+        {release.isError && (
+          <span role="alert" className="text-[var(--danger)]">
+            Could not save the release schedule.
+          </span>
+        )}
+      </form>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={(e) => void onLessonDragEnd(e)}
+      >
+        <SortableContext
+          items={module.lessons.map((l) => l.id)}
+          strategy={verticalListSortingStrategy}
+        >
           <div className="space-y-2">
             {module.lessons.map((lesson) => (
               <LessonRow
@@ -190,7 +270,9 @@ export function ModuleBlock({
               />
             ))}
             {module.lessons.length === 0 && (
-              <p className="px-1 text-[14px] text-[var(--muted)]">No lessons yet — add one below.</p>
+              <p className="px-1 text-[14px] text-[var(--muted)]">
+                No lessons yet — add one below.
+              </p>
             )}
           </div>
         </SortableContext>
@@ -206,12 +288,19 @@ export function ModuleBlock({
           }}
           className="h-10"
         />
-        <Button size="sm" variant="secondary" disabled={adding || !lessonTitle.trim()} onClick={() => void addLesson()}>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={adding || !lessonTitle.trim()}
+          onClick={() => void addLesson()}
+        >
           <Plus className="h-4 w-4" />
           Lesson
         </Button>
       </div>
-      <p className="mt-1.5 text-[14px] text-[var(--muted)]">Slug will be: {slugify(lessonTitle || "lesson")}</p>
+      <p className="mt-1.5 text-[14px] text-[var(--muted)]">
+        Slug will be: {slugify(lessonTitle || "lesson")}
+      </p>
     </div>
   );
 }

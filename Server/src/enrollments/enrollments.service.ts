@@ -47,6 +47,7 @@ export class EnrollmentsService {
         course: { organizationId: user.orgId },
       },
       include: {
+        cohort: { select: { startsAt: true } },
         course: {
           select: {
             id: true,
@@ -59,6 +60,7 @@ export class EnrollmentsService {
             modules: {
               orderBy: { sortOrder: 'asc' },
               select: {
+                releaseOffsetDays: true,
                 lessons: {
                   orderBy: { sortOrder: 'asc' },
                   select: { id: true, title: true, slug: true },
@@ -86,7 +88,17 @@ export class EnrollmentsService {
             })
           : [];
         const done = new Set(completed.map((c) => c.lessonId));
-        const continueLesson = lessons.find((l) => !done.has(l.id)) ?? null;
+        const availableLessons = row.course.modules
+          .filter(
+            (m) =>
+              !row.cohort ||
+              row.cohort.startsAt.getTime() +
+                m.releaseOffsetDays * 86_400_000 <=
+                Date.now(),
+          )
+          .flatMap((m) => m.lessons);
+        const continueLesson =
+          availableLessons.find((l) => !done.has(l.id)) ?? null;
         const progressPercent = lessonIds.length
           ? Math.round((done.size / lessonIds.length) * 100)
           : 0;

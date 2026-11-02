@@ -104,6 +104,7 @@ export class StudioService {
       data: {
         courseId,
         title: dto.title,
+        releaseOffsetDays: dto.releaseOffsetDays ?? 0,
         sortOrder: dto.sortOrder ?? (max._max.sortOrder ?? -1) + 1,
       },
     });
@@ -200,11 +201,7 @@ export class StudioService {
     return { deleted: true };
   }
 
-  async reorderLessons(
-    user: AuthUser,
-    moduleId: string,
-    orderedIds: string[],
-  ) {
+  async reorderLessons(user: AuthUser, moduleId: string, orderedIds: string[]) {
     const mod = await this.prisma.module.findUnique({
       where: { id: moduleId },
       include: { course: true },

@@ -32,6 +32,23 @@ export class CertificatesService {
     });
     if (completed < lessons.length) return null;
 
+    const quizzes = await this.prisma.quiz.findMany({
+      where: { lesson: { module: { courseId } } },
+      select: { id: true },
+    });
+    if (quizzes.length) {
+      const passed = await this.prisma.quizAttempt.findMany({
+        where: {
+          userId,
+          passed: true,
+          quizId: { in: quizzes.map((quiz) => quiz.id) },
+        },
+        distinct: ['quizId'],
+        select: { quizId: true },
+      });
+      if (passed.length < quizzes.length) return null;
+    }
+
     const existing = await this.prisma.certificate.findUnique({
       where: { courseId_userId: { courseId, userId } },
     });
@@ -106,7 +123,9 @@ export class CertificatesService {
         course: { organizationId: user.orgId },
       },
       include: {
-        course: { select: { id: true, title: true, slug: true, coverUrl: true } },
+        course: {
+          select: { id: true, title: true, slug: true, coverUrl: true },
+        },
       },
       orderBy: { issuedAt: 'desc' },
     });

@@ -1,83 +1,136 @@
-"use client";
-
-import { motion } from "framer-motion";
 import Link from "next/link";
-import { Check, ShieldCheck, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
-const plans = [
+import {
+  ArrowUpRight,
+  BookOpen,
+  Check,
+  GraduationCap,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
+const options = [
   {
-    name: "Starter",
-    price: "Free",
-    blurb: "For indie creators launching their first academy.",
-    features: ["1 academy", "Unlimited learners", "Quizzes & XP", "AI tutor (demo)"],
+    icon: BookOpen,
+    name: "For the curious",
+    title: "Find your next chapter.",
+    description:
+      "A focused home for your learning, from the first lesson to the final checkpoint.",
+    features: [
+      "Explore the published course collection",
+      "Self-paced lessons and personal study notes",
+      "Quizzes, feedback, and progress tracking",
+      "Course discussions and earned certificates",
+    ],
+    cta: "Start learning free",
+    href: "/register",
   },
   {
-    name: "Pro",
-    price: "$49",
-    blurb: "For cohorts that need analytics and AI quiz generation.",
-    features: ["Everything in Starter", "Curriculum builder", "Analytics + insights", "Certificates"],
+    icon: GraduationCap,
+    name: "For educators",
+    title: "Make your knowledge go further.",
+    description:
+      "Create a classroom with structure, purpose, and space for your learners to grow.",
+    features: [
+      "Create, organize, and publish courses",
+      "Build quizzes and manage your curriculum",
+      "Schedule cohorts and live sessions",
+      "Review completion and assessment analytics",
+    ],
+    cta: "Create your academy",
+    href: "/register?mode=academy",
     highlight: true,
   },
   {
-    name: "Org",
-    price: "Custom",
-    blurb: "Multi-seat academies with admin reporting.",
-    features: ["SSO-ready roles", "Seat reports", "Priority support", "White-label stretch"],
+    icon: Users,
+    name: "For learning teams",
+    title: "Bring everyone along.",
+    description:
+      "Connect your people with the right courses and a shared view of their progress.",
+    features: [
+      "Manage organization members and roles",
+      "Assign courses to individual learners",
+      "Track learning and course completion",
+      "Export reports for your teaching team",
+    ],
+    cta: "Build your workspace",
+    href: "/register?mode=academy",
   },
 ];
-
 export default function PricingPage() {
   return (
-    <div className="mx-auto max-w-6xl px-5 py-16">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <p className="text-[14px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-2)]">For learning teams with standards</p>
-        <h1 className="mt-3 font-[family-name:var(--font-display)] text-[36px] font-bold tracking-tight">
-          Invest in completion, not more content.
+    <>
+      <section className="site-container section-space">
+        <p className="eyebrow">A CLASSROOM WITH ROOM TO GROW</p>
+        <h1 className="catalog-title">
+          Good learning starts
+          <br />
+          with the right space.
         </h1>
-        <p className="mt-3 max-w-xl text-[16px] text-[var(--muted)]">
-          A clear starting point for every academy. Upgrade when your programmes need cohort operations, evidence, and deeper insight.
+        <p className="mt-6 max-w-2xl leading-8 text-[var(--muted)]">
+          Learn something new. Share what you know. Give your team a clear way
+          forward. Choose the workspace that fits your next chapter.
         </p>
-      </motion.div>
-
-      <div className="mt-12 grid gap-5 md:grid-cols-3">
-        {plans.map((plan, i) => (
-          <motion.div
-            key={plan.name}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 * i }}
-            className={`rounded-2xl border p-6 ${
-              plan.highlight
-                ? "border-[var(--accent)] bg-[color-mix(in_oklab,var(--accent)_10%,var(--surface))]"
-                : "border-[var(--border)] bg-[var(--surface)]"
-            }`}
-          >
-            <p className="text-[14px] font-medium text-[var(--muted)]">{plan.name}</p>
-            <p className="mt-2 font-[family-name:var(--font-display)] text-[32px] font-bold">
-              {plan.price}
-              {plan.price.startsWith("$") && (
-                <span className="text-[14px] font-normal text-[var(--muted)]"> /mo</span>
+        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+          {options.map(({ icon: Icon, ...o }) => (
+            <article
+              key={o.name}
+              className={`relative flex flex-col rounded-xl border p-7 sm:p-9 ${o.highlight ? "border-[#426248] bg-[#ecf0e4]" : "bg-white"}`}
+            >
+              {o.highlight && (
+                <span className="absolute -top-3 left-7 rounded bg-[#335440] px-3 py-1 text-sm text-white">
+                  Built for teaching
+                </span>
               )}
+              <Icon
+                className="mb-6 text-[#6b825f]"
+                size={32}
+                strokeWidth={1.5}
+              />
+              <p className="eyebrow">{o.name}</p>
+              <h2 className="mt-4 text-3xl font-medium">{o.title}</h2>
+              <p className="mt-5 text-sm leading-7 text-[var(--muted)]">
+                {o.description}
+              </p>
+              <ul className="my-8 space-y-4">
+                {o.features.map((f) => (
+                  <li key={f} className="flex gap-3 text-sm leading-6">
+                    <Check size={18} className="mt-1 shrink-0 text-[#56764e]" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link href={o.href} className="action-link mt-auto">
+                {o.cta}
+                <ArrowUpRight size={18} />
+              </Link>
+            </article>
+          ))}
+        </div>
+        <div className="mt-10 flex items-start gap-4 rounded-xl border p-6">
+          <ShieldCheck size={25} className="shrink-0 text-[#57724f]" />
+          <div>
+            <h2 className="text-lg font-medium">
+              Start with the learning experience.
+            </h2>
+            <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+              Free enrollment is available for the current course collection.
+              Paid course access, when offered by your academy, is shown before
+              checkout. Creating a workspace does not start a paid subscription.
             </p>
-            <p className="mt-2 text-[14px] text-[var(--muted)]">{plan.blurb}</p>
-            <ul className="mt-6 space-y-3">
-              {plan.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-[14px]">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--success)]" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <Link href="/register" className="mt-8 block">
-              <Button className="w-full" variant={plan.highlight ? "primary" : "secondary"}>
-                Get started
-              </Button>
-            </Link>
-          </motion.div>
-        ))}
-      </div>
-      <div className="mt-10 grid gap-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:grid-cols-2"><p className="flex gap-3 text-[14px] text-[var(--muted)]"><ShieldCheck className="h-5 w-5 shrink-0 text-[var(--success)]" />Every plan includes a learning record, structured curriculum delivery, and a focused learner workspace.</p><p className="flex gap-3 text-[14px] text-[var(--muted)]"><Sparkles className="h-5 w-5 shrink-0 text-[var(--xp)]" />AI support is grounded in enrolled course material—designed to help learners think, not bypass the work.</p></div>
-    </div>
+          </div>
+        </div>
+      </section>
+      <section className="final-cta">
+        <div className="site-container text-center">
+          <p className="eyebrow">
+            YOUR EXPERTISE CAN BE SOMEONE ELSE&apos;S STARTING POINT.
+          </p>
+          <h2>A better place to teach. A better way to learn.</h2>
+          <p>Bring the curriculum. Build the community. Follow the progress.</p>
+          <Link href="/register?mode=academy" className="action-link mt-7">
+            Create an academy <ArrowUpRight size={18} />
+          </Link>
+        </div>
+      </section>
+    </>
   );
 }

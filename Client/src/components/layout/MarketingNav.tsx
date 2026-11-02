@@ -1,51 +1,94 @@
 "use client";
-
+import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
+import { ArrowUpRight, BookOpen, Menu, X } from "lucide-react";
 import { useAppSelector } from "@/store/hooks";
-
+const links = [
+  { href: "/courses", label: "Explore courses" },
+  { href: "/#experience", label: "The experience" },
+  { href: "/pricing", label: "For academies" },
+  { href: "/#faq", label: "FAQs" },
+];
 export function MarketingNav() {
   const user = useAppSelector((s) => s.auth.user);
-
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
   return (
-    <motion.header
-      initial={{ y: -16, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] backdrop-blur-xl"
-    >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <Link href="/" className="font-[family-name:var(--font-display)] text-[20px] font-bold tracking-tight">
-          Learn<span className="text-[var(--accent)]">ora</span>
+    <header className="marketing-header">
+      <div className="site-container flex h-20 items-center justify-between gap-5">
+        <Link href="/" className="brand" aria-label="Learnora home">
+          <span className="brand-mark">
+            <BookOpen size={23} strokeWidth={1.8} />
+          </span>
+          learnora<span className="brand-dot">.</span>
         </Link>
-        <nav className="hidden items-center gap-8 text-[14px] text-[var(--muted)] md:flex">
-          <Link href="/courses" className="hover:text-[var(--text)] transition-colors">
-            Courses
-          </Link>
-          <Link href="/pricing" className="hover:text-[var(--text)] transition-colors">
-            Pricing
-          </Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          {user ? (
-            <Link href="/learn">
-              <Button size="sm">Go to Learn</Button>
+        <nav
+          aria-label="Main navigation"
+          className="hidden items-center gap-8 text-sm lg:flex"
+        >
+          {links.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={pathname === link.href ? "page" : undefined}
+              className="nav-link"
+            >
+              {link.label}
             </Link>
-          ) : (
-            <>
-              <Link href="/login">
-                <Button variant="ghost" size="sm">
-                  Log in
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button size="sm">Start free</Button>
-              </Link>
-            </>
-          )}
+          ))}
+        </nav>
+        <div className="flex items-center gap-5">
+          <Link
+            href={user ? "/learn" : "/login"}
+            className="hidden text-sm font-medium sm:block"
+          >
+            {user ? "My learning" : "Log in"}
+          </Link>
+          <Link
+            href={user ? "/learn" : "/register"}
+            className="action-link compact"
+          >
+            {user ? "Go to workspace" : "Start learning"}
+            <ArrowUpRight size={17} />
+          </Link>
+          <button
+            type="button"
+            className="grid size-10 place-items-center lg:hidden"
+            onClick={() => setOpen(!open)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
+          >
+            {open ? <X /> : <Menu />}
+          </button>
         </div>
       </div>
-    </motion.header>
+      {open && (
+        <nav
+          id="mobile-navigation"
+          aria-label="Mobile navigation"
+          className="site-container grid gap-1 border-t py-4 lg:hidden"
+        >
+          {[
+            ...links,
+            {
+              href: user ? "/learn" : "/login",
+              label: user ? "My learning" : "Log in",
+            },
+            ...(!user ? [{ href: "/register", label: "Start learning" }] : []),
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-3 text-sm hover:bg-[var(--surface-2)]"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+      )}
+    </header>
   );
 }

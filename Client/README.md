@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Learnora Client
 
-## Getting Started
+Next.js App Router, React, TypeScript, Tailwind CSS, Redux Toolkit, and React Query.
 
-First, run the development server:
+## Run
 
-```bash
+From `Client/`:
+
+```powershell
+npm install
+Copy-Item .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy the environment template only when `.env.local` does not already exist. The client runs at [localhost:3000](http://localhost:3000) and connects to the NestJS API at `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). Restart the development server after changing this variable.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Check and build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```powershell
+npm run lint
+npm run build
+npm start
+```
 
-## Learn More
+## Application
 
-To learn more about Next.js, take a look at the following resources:
+- Public: `/`, `/courses`, `/courses/[slug]`, `/pricing`.
+- Accounts: `/login`, `/register`.
+- Learning: `/learn`, course lessons, quizzes, cohorts, paths, certificates, and streaks.
+- Teaching: `/studio`, course builder, cohorts, community, analytics, and AI tools.
+- Organization: `/admin` and `/settings`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Content containers use 90% of the available page or workspace area. Public pages use the academic design system in `src/app/globals.css`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For the complete local stack, database setup, and demo accounts, see the [project guide](../Server/docs/PROJECT.md). On Windows, `npm run dev:all` from `Server/` launches the client, API, and AI service together.

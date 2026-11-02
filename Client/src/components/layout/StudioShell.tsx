@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -32,9 +33,11 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
   const user = useAppSelector((s) => s.auth.user);
   const hydrated = useAppSelector((s) => s.auth.hydrated);
-  const canStudio = user && ["OWNER", "ADMIN", "INSTRUCTOR"].includes(user.role);
+  const canStudio =
+    user && ["OWNER", "ADMIN", "INSTRUCTOR"].includes(user.role);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "light");
@@ -92,7 +95,12 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           </Link>
           <div className="flex gap-2">
             <Link href="/settings" className="flex-1">
-              <Button variant="ghost" size="sm" className="w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                aria-label="Account settings"
+              >
                 <Settings className="h-4 w-4" />
               </Button>
             </Link>
@@ -100,7 +108,9 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
               variant="ghost"
               size="sm"
               className="flex-1"
+              aria-label="Log out"
               onClick={() => {
+                queryClient.clear();
                 dispatch(logout());
                 router.push("/login");
               }}
@@ -112,13 +122,20 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-[var(--border)] px-4 md:hidden">
-          <Link href="/studio" className="font-[family-name:var(--font-display)] text-[18px] font-bold">
+        <header className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 md:hidden">
+          <Link
+            href="/studio"
+            className="font-[family-name:var(--font-display)] text-[18px] font-bold"
+          >
             Studio
           </Link>
-          <nav className="flex gap-3 text-[14px]">
+          <nav className="flex flex-wrap gap-3 text-[14px]">
             {links.map(({ href, label }) => (
-              <Link key={href} href={href} className="text-[var(--muted)] hover:text-[var(--text)]">
+              <Link
+                key={href}
+                href={href}
+                className="text-[var(--muted)] hover:text-[var(--text)]"
+              >
                 {label}
               </Link>
             ))}
@@ -128,7 +145,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="flex-1 p-5 md:p-8"
+          className="workspace-content min-w-0 flex-1"
         >
           {children}
         </motion.main>

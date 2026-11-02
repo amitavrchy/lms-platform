@@ -60,11 +60,29 @@ export default function LearnHomePage() {
 
   const streak = streakQuery.data;
   const enrollments = enrollmentsQuery.data ?? [];
-  const continueItem = enrollments.find((e) => e.status === "ACTIVE");
-  const cohorts = Array.isArray(cohortQuery.data) ? cohortQuery.data : cohortQuery.data ? [cohortQuery.data] : [];
+  const continueItem =
+    enrollments.find((e) => e.status === "ACTIVE" && e.continueLesson) ??
+    enrollments.find((e) => e.status === "ACTIVE");
+  const cohorts = (Array.isArray(cohortQuery.data) ? cohortQuery.data : []).map(
+    (entry) => entry.cohort ?? entry,
+  );
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
+      {enrollmentsQuery.isError && (
+        <div
+          role="alert"
+          className="rounded-xl border border-[var(--danger)] p-5 text-sm"
+        >
+          We could not load your learning plan.{" "}
+          <button
+            className="ml-2 underline"
+            onClick={() => void enrollmentsQuery.refetch()}
+          >
+            Try again
+          </button>
+        </div>
+      )}
       <div className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-br from-[color-mix(in_oklab,var(--accent)_20%,var(--surface))] via-[var(--surface)] to-[color-mix(in_oklab,var(--accent-2)_12%,var(--surface))] p-6 sm:p-8">
         <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-[var(--accent)]/20 blur-3xl" />
         <motion.h1
@@ -74,13 +92,33 @@ export default function LearnHomePage() {
         >
           Good to see you, {user?.name?.split(" ")[0] ?? "learner"}.
         </motion.h1>
-        <p className="mt-2 max-w-xl text-[16px] text-[var(--muted)]">Your study desk for today: continue the work, protect your rhythm, and know what is next.</p>
-        <div className="mt-5 flex flex-wrap gap-3 text-[14px] text-[var(--muted)]"><span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 py-1.5"><Sparkles className="h-4 w-4 text-[var(--xp)]" />{streak?.currentStreak ?? 0} day learning rhythm</span><span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 py-1.5"><CalendarClock className="h-4 w-4 text-[var(--accent-2)]" />{cohorts.length ? `${cohorts.length} active cohort${cohorts.length > 1 ? "s" : ""}` : "Plan your next session"}</span></div>
+        <p className="mt-2 max-w-xl text-[16px] text-[var(--muted)]">
+          Your study desk for today: continue the work, protect your rhythm, and
+          know what is next.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3 text-[14px] text-[var(--muted)]">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 py-1.5">
+            <Sparkles className="h-4 w-4 text-[var(--xp)]" />
+            {streak?.currentStreak ?? 0} day learning rhythm
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 py-1.5">
+            <CalendarClock className="h-4 w-4 text-[var(--accent-2)]" />
+            {cohorts.length
+              ? `${cohorts.length} active cohort${cohorts.length > 1 ? "s" : ""}`
+              : "Plan your next session"}
+          </span>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <StreakFlame streak={streak?.currentStreak ?? 0} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4" />
-        <DailyGoal earned={streak?.dailyXpEarned ?? 0} goal={streak?.dailyGoalXp ?? 30} />
+        <StreakFlame
+          streak={streak?.currentStreak ?? 0}
+          className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4"
+        />
+        <DailyGoal
+          earned={streak?.dailyXpEarned ?? 0}
+          goal={streak?.dailyGoalXp ?? 30}
+        />
       </div>
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
@@ -102,14 +140,22 @@ export default function LearnHomePage() {
           className="overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--surface)] to-[color-mix(in_oklab,var(--accent)_12%,var(--surface))]"
         >
           <div className="p-6">
-            <p className="text-[14px] font-medium text-[var(--accent-2)]">Continue learning</p>
-            <h2 className="mt-2 text-[22px] font-semibold">{continueItem.course.title}</h2>
+            <p className="text-[14px] font-medium text-[var(--accent-2)]">
+              Continue learning
+            </p>
+            <h2 className="mt-2 text-[22px] font-semibold">
+              {continueItem.course.title}
+            </h2>
             {continueItem.continueLesson && (
-              <p className="mt-1 text-[14px] text-[var(--muted)]">Next: {continueItem.continueLesson.title}</p>
+              <p className="mt-1 text-[14px] text-[var(--muted)]">
+                Next: {continueItem.continueLesson.title}
+              </p>
             )}
             <div className="mt-4">
               <ProgressBar value={continueItem.progressPercent ?? 0} />
-              <p className="mt-2 text-[14px] text-[var(--muted)]">{continueItem.progressPercent ?? 0}% complete</p>
+              <p className="mt-2 text-[14px] text-[var(--muted)]">
+                {continueItem.progressPercent ?? 0}% complete
+              </p>
             </div>
             <Link
               href={
@@ -129,11 +175,36 @@ export default function LearnHomePage() {
       )}
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-[color-mix(in_oklab,var(--accent)_35%,var(--border))] bg-[color-mix(in_oklab,var(--accent)_8%,var(--surface))] p-5">
-          <p className="text-[14px] font-medium text-[var(--accent-2)]">Next academic action</p>
-          <h2 className="mt-2 text-[20px] font-semibold">{continueItem?.continueLesson?.title ?? "Review your cohort plan"}</h2>
-          <p className="mt-2 text-[14px] text-[var(--muted)]">{continueItem ? `Continue ${continueItem.course.title} and keep your learning momentum.` : "Your next milestone will appear when a course or cohort is assigned."}</p>
-          {continueItem && <Link href={continueItem.continueLesson ? `/learn/courses/${continueItem.course.slug}/lessons/${continueItem.continueLesson.id}` : `/learn/courses/${continueItem.course.slug}`} className="mt-4 inline-block"><Button size="sm">Open next lesson <ArrowRight className="h-4 w-4" /></Button></Link>}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-[color-mix(in_oklab,var(--accent)_35%,var(--border))] bg-[color-mix(in_oklab,var(--accent)_8%,var(--surface))] p-5"
+        >
+          <p className="text-[14px] font-medium text-[var(--accent-2)]">
+            Next academic action
+          </p>
+          <h2 className="mt-2 text-[20px] font-semibold">
+            {continueItem?.continueLesson?.title ?? "Review your cohort plan"}
+          </h2>
+          <p className="mt-2 text-[14px] text-[var(--muted)]">
+            {continueItem
+              ? `Continue ${continueItem.course.title} and keep your learning momentum.`
+              : "Your next milestone will appear when a course or cohort is assigned."}
+          </p>
+          {continueItem && (
+            <Link
+              href={
+                continueItem.continueLesson
+                  ? `/learn/courses/${continueItem.course.slug}/lessons/${continueItem.continueLesson.id}`
+                  : `/learn/courses/${continueItem.course.slug}`
+              }
+              className="mt-4 inline-block"
+            >
+              <Button size="sm">
+                Open next lesson <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
         </motion.div>
         <CohortTimeline cohort={cohorts[0]} />
       </section>
@@ -143,7 +214,10 @@ export default function LearnHomePage() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-[20px] font-semibold">Your courses</h2>
-          <Link href="/courses" className="inline-flex items-center gap-1 text-[14px] text-[var(--accent-2)]">
+          <Link
+            href="/courses"
+            className="inline-flex items-center gap-1 text-[14px] text-[var(--accent-2)]"
+          >
             Browse catalog <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -161,7 +235,9 @@ export default function LearnHomePage() {
               >
                 <h3 className="text-[16px] font-semibold">{e.course.title}</h3>
                 {e.course.subtitle && (
-                  <p className="mt-1 line-clamp-2 text-[14px] text-[var(--muted)]">{e.course.subtitle}</p>
+                  <p className="mt-1 line-clamp-2 text-[14px] text-[var(--muted)]">
+                    {e.course.subtitle}
+                  </p>
                 )}
                 <div className="mt-4">
                   <ProgressBar value={e.progressPercent ?? 0} />
@@ -169,10 +245,32 @@ export default function LearnHomePage() {
               </Link>
             </motion.div>
           ))}
-          {enrollmentsQuery.isLoading && Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-2xl bg-[var(--surface)]" />)}
-          {!enrollmentsQuery.isLoading && enrollments.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-6 sm:col-span-2"><h3 className="text-[16px] font-semibold">Your learning plan starts here</h3><p className="mt-2 text-[14px] text-[var(--muted)]">Choose a path with a clear syllabus and a pace you can sustain.</p><Link href="/courses" className="mt-4 inline-flex text-[14px] font-medium text-[var(--accent-2)]">Find a course <ArrowRight className="ml-1 h-4 w-4" /></Link></div>
-          )}
+          {enrollmentsQuery.isLoading &&
+            Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-40 animate-pulse rounded-2xl bg-[var(--surface)]"
+              />
+            ))}
+          {!enrollmentsQuery.isLoading &&
+            !enrollmentsQuery.isError &&
+            enrollments.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-6 sm:col-span-2">
+                <h3 className="text-[16px] font-semibold">
+                  Your learning plan starts here
+                </h3>
+                <p className="mt-2 text-[14px] text-[var(--muted)]">
+                  Choose a path with a clear syllabus and a pace you can
+                  sustain.
+                </p>
+                <Link
+                  href="/courses"
+                  className="mt-4 inline-flex text-[14px] font-medium text-[var(--accent-2)]"
+                >
+                  Find a course <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </div>
+            )}
         </div>
       </section>
     </div>

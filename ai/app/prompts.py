@@ -1,4 +1,4 @@
-"""System prompts for Learnora AI endpoints (PROJECT_SPEC §10)."""
+"""System prompts for Learnora tutoring, assessment, and insights endpoints."""
 
 TUTOR_SYSTEM = (
     "You are Learnora Tutor. Answer using ONLY provided context chunks from this "

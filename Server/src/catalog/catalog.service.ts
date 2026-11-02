@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CourseStatus } from '@prisma/client';
+import { CourseStatus, EnrollmentStatus } from '@prisma/client';
 import { AccessService } from '../common/services/access.service.js';
 import type { AuthUser } from '../common/types/auth.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -15,9 +15,7 @@ export class CatalogService {
     return this.prisma.course.findMany({
       where: {
         status: CourseStatus.PUBLISHED,
-        ...(orgSlug
-          ? { organization: { slug: orgSlug.toLowerCase() } }
-          : {}),
+        ...(orgSlug ? { organization: { slug: orgSlug.toLowerCase() } } : {}),
       },
       select: {
         id: true,
@@ -40,9 +38,7 @@ export class CatalogService {
       where: {
         slug,
         status: CourseStatus.PUBLISHED,
-        ...(orgSlug
-          ? { organization: { slug: orgSlug.toLowerCase() } }
-          : {}),
+        ...(orgSlug ? { organization: { slug: orgSlug.toLowerCase() } } : {}),
       },
       include: {
         organization: { select: { id: true, slug: true, name: true } },
@@ -58,6 +54,7 @@ export class CatalogService {
                 type: true,
                 durationSec: true,
                 sortOrder: true,
+                learningObjectives: true,
               },
             },
           },
@@ -72,6 +69,7 @@ export class CatalogService {
 
     const enrollment = await this.prisma.enrollment.findUnique({
       where: { courseId_userId: { courseId: course.id, userId: user.id } },
+      include: { cohort: { select: { startsAt: true } } },
     });
     const lessonIds = course.modules.flatMap((m) => m.lessons.map((l) => l.id));
     const completed = lessonIds.length
@@ -98,12 +96,32 @@ export class CatalogService {
 
     return {
       ...course,
-      enrolled: Boolean(enrollment),
+      enrolled: Boolean(
+        enrollment && enrollment.status !== EnrollmentStatus.REVOKED,
+      ),
+      outcomes: course.modules
+        .flatMap((m) => m.lessons.flatMap((l) => l.learningObjectives))
+        .filter((value, index, all) => all.indexOf(value) === index)
+        .slice(0, 6),
       progressPercent: lessonIds.length
         ? Math.round((completed / lessonIds.length) * 100)
         : 0,
       modules: course.modules.map((m) => ({
         ...m,
+        availableAt: enrollment?.cohort
+          ? new Date(
+              enrollment.cohort.startsAt.getTime() +
+                m.releaseOffsetDays * 86_400_000,
+            ).toISOString()
+          : null,
+        locked:
+          !this.access.isStaff(user.role) &&
+          Boolean(
+            enrollment?.cohort &&
+            enrollment.cohort.startsAt.getTime() +
+              m.releaseOffsetDays * 86_400_000 >
+              Date.now(),
+          ),
         lessons: m.lessons.map((l) => ({
           ...l,
           completed: doneIds.has(l.id),
@@ -115,10 +133,35 @@ export class CatalogService {
   async getLesson(lessonId: string, user: AuthUser) {
     const lesson = await this.access.assertLessonAccess(user, lessonId);
     const siblings = await this.prisma.lesson.findMany({
-      where: { moduleId: lesson.moduleId },
-      orderBy: { sortOrder: 'asc' },
-      select: { id: true, title: true, sortOrder: true, slug: true },
+      where: { module: { courseId: lesson.module.course.id } },
+      orderBy: [{ module: { sortOrder: 'asc' } }, { sortOrder: 'asc' }],
+      select: {
+        id: true,
+        title: true,
+        sortOrder: true,
+        slug: true,
+        moduleId: true,
+        module: { select: { releaseOffsetDays: true } },
+      },
     });
+    const enrollment = this.access.isStaff(user.role)
+      ? null
+      : await this.prisma.enrollment.findUnique({
+          where: {
+            courseId_userId: {
+              courseId: lesson.module.course.id,
+              userId: user.id,
+            },
+          },
+          include: { cohort: { select: { startsAt: true } } },
+        });
+    const navigation = siblings.filter(
+      (item) =>
+        !enrollment?.cohort ||
+        enrollment.cohort.startsAt.getTime() +
+          item.module.releaseOffsetDays * 86_400_000 <=
+          Date.now(),
+    );
     return {
       id: lesson.id,
       title: lesson.title,
@@ -127,6 +170,13 @@ export class CatalogService {
       contentMd: lesson.contentMd,
       videoUrl: lesson.videoUrl,
       durationSec: lesson.durationSec,
+      objectives: lesson.learningObjectives,
+      transcript: lesson.transcriptMd,
+      resources:
+        lesson.resourceUrl && !lesson.resourceUrl.includes('learnora.example')
+          ? [{ title: 'Lesson reference material', url: lesson.resourceUrl }]
+          : [],
+      navigation,
       quiz: lesson.quiz
         ? { id: lesson.quiz.id, title: lesson.quiz.title }
         : null,
@@ -138,16 +188,14 @@ export class CatalogService {
           slug: lesson.module.course.slug,
           title: lesson.module.course.title,
         },
-        lessons: siblings,
+        lessons: siblings.filter((item) => item.moduleId === lesson.moduleId),
       },
     };
   }
 
   listPaths(orgSlug?: string) {
     return this.prisma.learningPath.findMany({
-      where: orgSlug
-        ? { organization: { slug: orgSlug.toLowerCase() } }
-        : {},
+      where: orgSlug ? { organization: { slug: orgSlug.toLowerCase() } } : {},
       orderBy: { title: 'asc' },
     });
   }

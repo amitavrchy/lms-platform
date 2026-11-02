@@ -23,7 +23,12 @@
     "postinstall": "prisma skills sync || exit 0",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "dev:all": "powershell -NoProfile -File ./scripts/start-local.ps1",
+    "content:update": "tsx prisma/update-academic-content.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

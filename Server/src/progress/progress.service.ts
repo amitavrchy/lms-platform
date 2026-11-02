@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { AccessService } from '../common/services/access.service.js';
 import type { AuthUser } from '../common/types/auth.types.js';
 import {
@@ -36,6 +36,16 @@ export class ProgressService {
 
   async update(user: AuthUser, lessonId: string, dto: UpdateProgressDto) {
     const lesson = await this.access.assertLessonAccess(user, lessonId);
+    if (dto.completed && lesson.quiz) {
+      const passed = await this.prisma.quizAttempt.findFirst({
+        where: { quizId: lesson.quiz.id, userId: user.id, passed: true },
+        select: { id: true },
+      });
+      if (!passed)
+        throw new ForbiddenException(
+          'Pass the checkpoint quiz before completing this lesson',
+        );
+    }
     const existing = await this.prisma.lessonProgress.findUnique({
       where: { lessonId_userId: { lessonId, userId: user.id } },
     });

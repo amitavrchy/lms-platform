@@ -92,6 +92,14 @@ export class UpdateCourseDto {
 }
 
 export class CreateModuleDto {
+  @ApiPropertyOptional({
+    description: 'Days after the cohort starts before this module opens.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  releaseOffsetDays?: number;
+
   @ApiProperty()
   @IsString()
   @MinLength(1)
@@ -105,6 +113,14 @@ export class CreateModuleDto {
 }
 
 export class UpdateModuleDto {
+  @ApiPropertyOptional({
+    description: 'Days after the cohort starts before this module opens.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  releaseOffsetDays?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

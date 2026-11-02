@@ -5,3 +5,15 @@ node_modules
 /generated/prisma
 
 /generated
+
+# Build output and local runtime files
+/dist/
+/out/
+/coverage/
+*.tsbuildinfo
+.env.*
+!.env.example
+*.log
+.DS_Store
+.logs/
+.artifacts/
