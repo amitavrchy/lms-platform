@@ -1,0 +1,2 @@
+Server/docker-entrypoint-render.sh text eol=lf
+Server/Dockerfile.render text eol=lf
