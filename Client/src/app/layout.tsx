@@ -26,6 +26,14 @@ export const metadata: Metadata = {
   },
   description:
     "A creator-and-cohort LMS with beautiful lessons, streaks, XP, certificates, and an AI tutor grounded in your course content.",
+  applicationName: "Learnora",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-icon.png" }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

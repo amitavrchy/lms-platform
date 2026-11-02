@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Learnora">
+  <rect x="2" y="2" width="60" height="60" rx="16" ry="16" fill="#2c4939"/>
+  <!-- soften bottom-left like brand-mark -->
+  <path d="M2 46 V50 Q2 62 14 62 H18 V46 Z" fill="#2c4939"/>
+  <!-- open book -->
+  <path d="M32 18 L16 22 V46 L32 48 Z" fill="none" stroke="#faf9f6" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M32 18 L48 22 V46 L32 48 Z" fill="none" stroke="#faf9f6" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M32 18 V48" stroke="#faf9f6" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M20 28 H28 M20 34 H28 M20 40 H27" stroke="#faf9f6" stroke-width="1.6" stroke-linecap="round" opacity="0.9"/>
+  <path d="M36 28 H44 M36 34 H44 M37 40 H44" stroke="#faf9f6" stroke-width="1.6" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="52" cy="52" r="5" fill="#d5693f"/>
+</svg>
