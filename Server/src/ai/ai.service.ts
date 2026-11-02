@@ -1,5 +1,6 @@
 import {
   BadGatewayException,
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -64,13 +65,6 @@ export class AiService {
   }
 
   async quizGenerate(user: AuthUser, dto: QuizGenerateDto) {
-    const lesson = await this.prisma.lesson.findUnique({
-      where: { id: dto.lessonId },
-      include: { module: { include: { course: true } } },
-    });
-    if (!lesson || lesson.module.course.organizationId !== user.orgId) {
-      throw new NotFoundException('Lesson not found in org');
-    }
     const canGenerate: OrgRole[] = [
       OrgRole.OWNER,
       OrgRole.ADMIN,
@@ -80,15 +74,33 @@ export class AiService {
       throw new ForbiddenException('Instructor role required');
     }
 
-    const lessonText =
-      lesson.contentMd ??
-      `${lesson.title}\n${lesson.videoUrl ?? ''}`.trim();
+    let lessonText = dto.lessonText?.trim();
+    let lessonId = dto.lessonId;
+
+    if (dto.lessonId) {
+      const lesson = await this.prisma.lesson.findUnique({
+        where: { id: dto.lessonId },
+        include: { module: { include: { course: true } } },
+      });
+      if (!lesson || lesson.module.course.organizationId !== user.orgId) {
+        throw new NotFoundException('Lesson not found in org');
+      }
+      lessonText =
+        lessonText ||
+        lesson.contentMd ||
+        `${lesson.title}\n${lesson.videoUrl ?? ''}`.trim();
+      lessonId = lesson.id;
+    }
+
+    if (!lessonText) {
+      throw new BadRequestException('Provide lessonText or lessonId');
+    }
 
     return this.proxy('/v1/quiz/generate', {
       lessonText,
       count: dto.count ?? 5,
       difficulty: dto.difficulty ?? 'medium',
-      lessonId: lesson.id,
+      lessonId,
       orgId: user.orgId,
     });
   }

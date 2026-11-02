@@ -39,9 +39,16 @@ export class TutorDto {
 }
 
 export class QuizGenerateDto {
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Generate from an existing lesson' })
+  @IsOptional()
   @IsString()
-  lessonId!: string;
+  lessonId?: string;
+
+  @ApiPropertyOptional({ description: 'Raw lesson text (spec MVP)' })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  lessonText?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
