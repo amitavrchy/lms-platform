@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     POSTGRES_PASSWORD=learnora \
     POSTGRES_DB=learnora \
     PORT=10000 \
-    NODE_OPTIONS=--max-old-space-size=192
+    DATABASE_URL=postgresql://learnora:learnora@127.0.0.1:5432/learnora?schema=public
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
@@ -27,7 +27,8 @@ RUN npx prisma generate \
   && chmod +x /app/docker-entrypoint-render.sh \
   && npm prune --omit=dev
 
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    NODE_OPTIONS=--max-old-space-size=192
 
 EXPOSE 10000
 ENTRYPOINT ["/app/docker-entrypoint-render.sh"]
