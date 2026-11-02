@@ -5,7 +5,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Nest keeps a raw Buffer on requests while Express continues parsing JSON
+  // for every endpoint. Stripe signature verification relies on that Buffer.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
   const origin = config.get<string>('CLIENT_ORIGIN') ?? 'http://localhost:3000';

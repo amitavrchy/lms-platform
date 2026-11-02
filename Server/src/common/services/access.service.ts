@@ -64,7 +64,26 @@ export class AccessService {
       throw new ForbiddenException('Course is not published');
     }
 
-    await this.requireEnrollment(user.id, course.id);
+    const enrollment = await this.requireEnrollment(user.id, course.id);
+    if (enrollment.cohortId) {
+      const cohort = await this.prisma.cohort.findFirst({
+        where: {
+          id: enrollment.cohortId,
+          courseId: course.id,
+          organizationId: user.orgId,
+        },
+        select: { startsAt: true },
+      });
+      if (cohort) {
+        const releaseAt = new Date(cohort.startsAt);
+        releaseAt.setUTCDate(
+          releaseAt.getUTCDate() + lesson.module.releaseOffsetDays,
+        );
+        if (releaseAt > new Date()) {
+          throw new ForbiddenException('Module content is not yet released');
+        }
+      }
+    }
     return lesson;
   }
 }

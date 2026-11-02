@@ -3,12 +3,17 @@ import { ConfigModule } from '@nestjs/config';
 import { AdminModule } from './admin/admin.module.js';
 import { AiModule } from './ai/ai.module.js';
 import { AnalyticsModule } from './analytics/analytics.module.js';
+import { AnnouncementsModule } from './announcements/announcements.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CatalogModule } from './catalog/catalog.module.js';
 import { CertificatesModule } from './certificates/certificates.module.js';
+import { CohortsModule } from './cohorts/cohorts.module.js';
 import { CommonModule } from './common/common.module.js';
+import { CommerceModule } from './commerce/commerce.module.js';
+import { DiscussionsModule } from './discussions/discussions.module.js';
 import { EngagementModule } from './engagement/engagement.module.js';
 import { EnrollmentsModule } from './enrollments/enrollments.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 import { PathsModule } from './paths/paths.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ProgressModule } from './progress/progress.module.js';
@@ -20,6 +25,11 @@ import { StudioModule } from './studio/studio.module.js';
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     CommonModule,
+    CohortsModule,
+    AnnouncementsModule,
+    DiscussionsModule,
+    NotificationsModule,
+    CommerceModule,
     EngagementModule,
     AuthModule,
     CatalogModule,
