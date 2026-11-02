@@ -7,6 +7,8 @@ import { motion } from "framer-motion";
 import {
   BarChart3,
   BookOpen,
+  MessagesSquare,
+  UsersRound,
   Clapperboard,
   LogOut,
   Settings,
@@ -20,6 +22,8 @@ import { Button } from "@/components/ui/button";
 
 const links = [
   { href: "/studio", label: "Courses", icon: BookOpen, exact: true },
+  { href: "/studio/cohorts", label: "Cohorts", icon: UsersRound },
+  { href: "/studio/community", label: "Community", icon: MessagesSquare },
   { href: "/studio/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/studio/ai", label: "AI", icon: Sparkles },
 ];

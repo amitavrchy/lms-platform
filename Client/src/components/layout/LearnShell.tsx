@@ -12,6 +12,7 @@ import {
   Award,
   Clapperboard,
   Shield,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/features/authSlice";
@@ -23,6 +24,7 @@ const links = [
   { href: "/courses", label: "Catalog", icon: BookOpen },
   { href: "/learn/streak", label: "Streak", icon: Flame },
   { href: "/learn/certificates", label: "Certificates", icon: Award },
+  { href: "/learn/cohorts", label: "Cohort", icon: Users },
 ];
 
 export function LearnShell({ children }: { children: React.ReactNode }) {

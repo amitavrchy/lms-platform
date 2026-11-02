@@ -13,6 +13,8 @@ import { ProgressBar } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatXp } from "@/lib/utils";
+import { AnnouncementFeed } from "@/components/academic/AnnouncementFeed";
+import { CohortTimeline } from "@/components/academic/CohortTimeline";
 
 type Streak = {
   currentStreak: number;
@@ -48,6 +50,11 @@ export default function LearnHomePage() {
   const enrollmentsQuery = useQuery({
     queryKey: queryKeys.enrollments,
     queryFn: async () => (await api.get<Enrollment[]>("/enrollments/me")).data,
+    enabled: !!user,
+  });
+  const cohortQuery = useQuery({
+    queryKey: ["cohorts", "me"],
+    queryFn: async () => (await api.get("/cohorts/me")).data,
     enabled: !!user,
   });
 
@@ -117,6 +124,18 @@ export default function LearnHomePage() {
           </div>
         </motion.section>
       )}
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-[color-mix(in_oklab,var(--accent)_35%,var(--border))] bg-[color-mix(in_oklab,var(--accent)_8%,var(--surface))] p-5">
+          <p className="text-[14px] font-medium text-[var(--accent-2)]">Next academic action</p>
+          <h2 className="mt-2 text-[20px] font-semibold">{continueItem?.continueLesson?.title ?? "Review your cohort plan"}</h2>
+          <p className="mt-2 text-[14px] text-[var(--muted)]">{continueItem ? `Continue ${continueItem.course.title} and keep your learning momentum.` : "Your next milestone will appear when a course or cohort is assigned."}</p>
+          {continueItem && <Link href={continueItem.continueLesson ? `/learn/courses/${continueItem.course.slug}/lessons/${continueItem.continueLesson.id}` : `/learn/courses/${continueItem.course.slug}`} className="mt-4 inline-block"><Button size="sm">Open next lesson <ArrowRight className="h-4 w-4" /></Button></Link>}
+        </motion.div>
+        <CohortTimeline cohort={cohortQuery.data} />
+      </section>
+
+      <AnnouncementFeed compact />
 
       <section>
         <div className="mb-4 flex items-center justify-between">

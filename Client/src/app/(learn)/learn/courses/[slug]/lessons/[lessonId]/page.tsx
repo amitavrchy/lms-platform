@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { Focus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -19,6 +17,9 @@ import { CompleteBar } from "@/components/player/CompleteBar";
 import { TutorDrawer } from "@/components/ai/TutorDrawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AcademicMarkdown } from "@/components/academic/AcademicMarkdown";
+import { LessonResources } from "@/components/academic/LessonResources";
+import { DiscussionPanel } from "@/components/academic/DiscussionPanel";
 
 type LessonDetail = {
   id: string;
@@ -29,6 +30,9 @@ type LessonDetail = {
   videoUrl?: string | null;
   durationSec: number;
   quiz?: { id: string; title: string } | null;
+  objectives?: string[];
+  transcript?: string | null;
+  resources?: unknown[];
   module: {
     id: string;
     title: string;
@@ -142,10 +146,8 @@ export default function LessonPlayerPage() {
             onProgress={savePosition}
           />
         ) : (
-          <article className="prose prose-invert max-w-none rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-[15px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {lesson.contentMd || "_No content yet._"}
-            </ReactMarkdown>
+          <article className="max-w-none rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <AcademicMarkdown>{lesson.contentMd || "_No content yet._"}</AcademicMarkdown>
           </article>
         )}
 
@@ -160,6 +162,7 @@ export default function LessonPlayerPage() {
               <Focus className="h-4 w-4" />
               Focus
             </Button>
+            <span className="text-[14px] text-[var(--muted)]" aria-label="Keyboard shortcuts">Shortcuts: A tutor · F focus · N next</span>
             {[0.75, 1, 1.25, 1.5, 2].map((r) => (
               <Button
                 key={r}
@@ -189,6 +192,8 @@ export default function LessonPlayerPage() {
           hasNext={Boolean(next)}
           onNext={() => next && router.push(`/learn/courses/${slug}/lessons/${next.id}`)}
         />
+        {!focusMode && <LessonResources objectives={lesson.objectives} transcript={lesson.transcript} resources={lesson.resources} />}
+        {!focusMode && <DiscussionPanel courseId={lesson.module.course.id} lessonId={lessonId} />}
       </div>
 
       <TutorDrawer lessonId={lessonId} />

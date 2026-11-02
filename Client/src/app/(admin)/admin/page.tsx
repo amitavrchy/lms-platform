@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { UserPlus } from "lucide-react";
+import { Download, Search, UserPlus } from "lucide-react";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,8 @@ export default function AdminPage() {
   const [courseId, setCourseId] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [assignMsg, setAssignMsg] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
 
   const membersQuery = useQuery({
     queryKey: queryKeys.admin.members,
@@ -78,6 +80,10 @@ export default function AdminPage() {
   });
 
   const members = membersQuery.data ?? [];
+  const visibleMembers = members.filter((member) => {
+    const haystack = `${member.user.name} ${member.user.email}`.toLowerCase();
+    return haystack.includes(search.toLowerCase()) && (roleFilter === "ALL" || member.role === roleFilter);
+  });
   const reports = reportsQuery.data;
 
   const reportCards = useMemo(
@@ -103,6 +109,13 @@ export default function AdminPage() {
     });
   }
 
+  function downloadCsv() {
+    const rows = [["Name", "Email", "Role", "Joined"], ...members.map((member) => [member.user.name, member.user.email, member.role, member.user.createdAt])];
+    const escape = (cell: string) => `"${String(cell).replaceAll('"', '""')}"`;
+    const url = URL.createObjectURL(new Blob([rows.map((row) => row.map(escape).join(",")).join("\n")], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "learnora-members.csv"; anchor.click(); URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-10">
       <div>
@@ -117,7 +130,7 @@ export default function AdminPage() {
       </div>
 
       <section>
-        <h2 className="mb-4 text-[20px] font-semibold">Reports</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 className="text-[20px] font-semibold">Organization signals</h2><Button variant="secondary" size="sm" onClick={downloadCsv}><Download className="h-4 w-4" />Export member CSV</Button></div>
         {reportsQuery.isLoading && <p className="text-[14px] text-[var(--muted)]">Loading…</p>}
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {reportCards.map((c, i) => (
@@ -175,10 +188,14 @@ export default function AdminPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[20px] font-semibold">Members</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-[20px] font-semibold">Members</h2><p className="text-[14px] text-[var(--muted)]">{visibleMembers.length} shown · select learners for a bulk course assignment</p></div>
+        <div className="flex flex-wrap gap-3">
+          <label className="relative min-w-[220px] flex-1"><span className="sr-only">Search members</span><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-[var(--muted)]" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or email" className="h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-9 pr-3 text-[14px]" /></label>
+          <select aria-label="Filter members by role" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="h-10 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-[14px]"><option value="ALL">All roles</option>{ROLES.map((role) => <option key={role}>{role}</option>)}</select>
+        </div>
         {membersQuery.isLoading && <p className="text-[14px] text-[var(--muted)]">Loading members…</p>}
         <div className="space-y-2">
-          {members.map((m, i) => (
+          {visibleMembers.map((m, i) => (
             <motion.div
               key={m.id}
               initial={{ opacity: 0, y: 6 }}

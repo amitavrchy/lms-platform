@@ -39,6 +39,10 @@ type CourseAnalytics = {
     avgScore: number;
     passRate: number;
   }[];
+  atRiskLearners?: { id?: string; name?: string; completionRate?: number; lastProgressAt?: string }[];
+  lowCompletion?: number;
+  noRecentProgress?: number;
+  cohortName?: string;
 };
 
 type InsightsPayload = {
@@ -104,6 +108,9 @@ export default function StudioAnalyticsPage() {
 
   const insights = insightLines(insightsQuery.data);
   const stats = analyticsQuery.data;
+  const riskLearners = stats?.atRiskLearners ?? [];
+  const lowCompletion = stats?.lowCompletion ?? riskLearners.filter((learner) => (learner.completionRate ?? 1) < 0.5).length;
+  const noRecentProgress = stats?.noRecentProgress ?? riskLearners.filter((learner) => !learner.lastProgressAt).length;
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -145,6 +152,17 @@ export default function StudioAnalyticsPage() {
 
       {stats && (
         <>
+          <section aria-label="Engagement risks" className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div><h2 className="text-[18px] font-semibold">Academic engagement</h2><p className="text-[14px] text-[var(--muted)]">Course context{stats.cohortName ? ` · ${stats.cohortName}` : ""}</p></div>
+              <span className="text-[14px] text-[var(--muted)]">{riskLearners.length ? `${riskLearners.length} learner signals` : "No learner signals returned"}</span>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl bg-[var(--surface-2)] p-4"><p className="text-[14px] text-[var(--muted)]">Low completion</p><p className="mt-1 text-[26px] font-bold">{lowCompletion}</p><p className="text-[14px] text-[var(--muted)]">Learners below 50% completion.</p></div>
+              <div className="rounded-xl bg-[var(--surface-2)] p-4"><p className="text-[14px] text-[var(--muted)]">No recent progress</p><p className="mt-1 text-[26px] font-bold">{noRecentProgress}</p><p className="text-[14px] text-[var(--muted)]">Signals needing a supportive check-in.</p></div>
+            </div>
+            {!riskLearners.length && <p className="mt-4 text-[14px] text-[var(--muted)]">Engagement data will appear after learners begin the course. Use this space to prioritize timely outreach, not to penalize learners.</p>}
+          </section>
           <div className="grid gap-4 sm:grid-cols-3">
             {[
               { label: "Enrollments", value: stats.enrollments },

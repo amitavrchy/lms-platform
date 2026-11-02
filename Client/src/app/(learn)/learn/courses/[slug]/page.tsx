@@ -11,6 +11,9 @@ import { queryKeys } from "@/lib/query-keys";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress";
+import { CourseOutcomes } from "@/components/academic/CourseOutcomes";
+import { LockedModuleState } from "@/components/academic/LockedModuleState";
+import { CohortTimeline } from "@/components/academic/CohortTimeline";
 
 type Lesson = {
   id: string;
@@ -26,6 +29,10 @@ type Module = {
   title: string;
   sortOrder: number;
   lessons: Lesson[];
+  locked?: boolean;
+  isLocked?: boolean;
+  availableAt?: string | null;
+  releaseAt?: string | null;
 };
 
 type CourseDetail = {
@@ -39,6 +46,8 @@ type CourseDetail = {
   enrolled?: boolean;
   progressPercent?: number;
   modules: Module[];
+  outcomes?: string[];
+  learningOutcomes?: string[];
 };
 
 export default function CourseOutlinePage() {
@@ -49,6 +58,12 @@ export default function CourseOutlinePage() {
   const { data: course, isLoading } = useQuery({
     queryKey: queryKeys.catalog.course(slug),
     queryFn: async () => (await api.get<CourseDetail>(`/catalog/courses/${slug}`)).data,
+  });
+  const entitlementQuery = useQuery({
+    queryKey: ["commerce", "course-status", slug],
+    queryFn: async () => (await api.get(`/commerce/courses/${course?.id}/status`)).data,
+    enabled: Boolean(course?.id),
+    retry: false,
   });
 
   const enroll = useMutation({
@@ -63,12 +78,23 @@ export default function CourseOutlinePage() {
     },
     onError: () => toast.error("Could not enroll"),
   });
+  const checkout = useMutation({
+    mutationFn: async () => (await api.post("/commerce/checkout", { courseId: course?.id })).data,
+    onSuccess: (data) => {
+      const url = data && typeof data === "object" ? (data as Record<string, unknown>).url ?? (data as Record<string, unknown>).checkoutUrl : undefined;
+      if (typeof url === "string") window.location.assign(url);
+      else toast.message("Checkout is being configured for this course.");
+    },
+    onError: () => toast.error("Checkout is unavailable right now"),
+  });
 
   if (isLoading || !course) {
     return <div className="h-64 animate-pulse rounded-2xl bg-[var(--surface)]" />;
   }
 
   const firstLesson = course.modules.flatMap((m) => m.lessons)[0];
+  const entitlement = entitlementQuery.data && typeof entitlementQuery.data === "object" ? entitlementQuery.data as Record<string, unknown> : {};
+  const status = typeof entitlement.status === "string" ? entitlement.status : course.enrolled ? "Active enrollment" : "Enrollment required";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -87,6 +113,7 @@ export default function CourseOutlinePage() {
             <p className="mt-2 text-[14px] text-[var(--muted)]">{course.progressPercent ?? 0}% complete</p>
           </div>
         )}
+        <p className="mt-3 text-[14px] text-[var(--muted)]">Course access: <span className="font-medium text-[var(--text)]">{status}</span></p>
         <div className="mt-6 flex flex-wrap gap-3">
           {course.enrolled ? (
             firstLesson && (
@@ -100,18 +127,22 @@ export default function CourseOutlinePage() {
               </Button>
             )
           ) : (
-            <Button onClick={() => enroll.mutate()} disabled={enroll.isPending}>
-              {enroll.isPending ? "Enrolling…" : "Enroll free"}
-            </Button>
+            <>
+              <Button onClick={() => enroll.mutate()} disabled={enroll.isPending}>{enroll.isPending ? "Enrolling…" : "Enroll free"}</Button>
+              {Boolean(entitlement.requiresPurchase ?? entitlement.purchasable) && <Button variant="secondary" onClick={() => checkout.mutate()} disabled={checkout.isPending}>{checkout.isPending ? "Opening checkout…" : "Get access"}</Button>}
+            </>
           )}
         </div>
       </motion.div>
 
-      <div className="mt-10 space-y-6">
+      <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="space-y-6">
         {course.modules
           .slice()
           .sort((a, b) => a.sortOrder - b.sortOrder)
-          .map((mod, mi) => (
+          .map((mod, mi) => {
+            const locked = Boolean(mod.locked ?? mod.isLocked);
+            return (
             <motion.section
               key={mod.id}
               initial={{ opacity: 0, y: 12 }}
@@ -122,7 +153,7 @@ export default function CourseOutlinePage() {
               <h2 className="text-[16px] font-semibold">
                 Module {mi + 1}: {mod.title}
               </h2>
-              <ul className="mt-4 space-y-2">
+              {locked ? <LockedModuleState availableAt={mod.availableAt ?? mod.releaseAt} /> : <ul className="mt-4 space-y-2">
                 {mod.lessons
                   .slice()
                   .sort((a, b) => 0)
@@ -152,9 +183,14 @@ export default function CourseOutlinePage() {
                       </Link>
                     </li>
                   ))}
-              </ul>
+              </ul>}
             </motion.section>
-          ))}
+          );})}
+        </div>
+        <aside className="space-y-4">
+          <CourseOutcomes outcomes={course.outcomes ?? course.learningOutcomes} />
+          <CohortTimeline />
+        </aside>
       </div>
     </div>
   );

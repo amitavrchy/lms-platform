@@ -18,6 +18,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const canAdmin = user && ["OWNER", "ADMIN"].includes(user.role);
 
   useEffect(() => {
+    document.documentElement.setAttribute("data-theme", "light");
+    return () => document.documentElement.removeAttribute("data-theme");
+  }, []);
+
+  useEffect(() => {
     if (hydrated && !user) router.replace("/login");
     else if (hydrated && user && !canAdmin) router.replace("/learn");
   }, [hydrated, user, canAdmin, router]);
@@ -36,7 +41,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <p className="mb-6 px-2 text-[14px] text-[var(--muted)]">
           Learn<span className="text-[var(--accent)]">ora</span> org
         </p>
-        <nav className="flex flex-1 flex-col gap-1">
+        <nav aria-label="Admin navigation" className="flex flex-1 flex-col gap-1">
           <Link
             href="/admin"
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] transition ${
@@ -46,7 +51,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             }`}
           >
             <Shield className="h-4 w-4" />
-            Members & reports
+            Members, seats & reports
           </Link>
         </nav>
         <div className="space-y-2 border-t border-[var(--border)] pt-4">
