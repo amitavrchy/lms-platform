@@ -129,10 +129,16 @@ export function LearnShell({ children }: { children: React.ReactNode }) {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="flex-1 p-5 md:p-8"
+          className="flex-1 pb-24 p-5 md:p-8"
         >
           {children}
         </motion.main>
+        <nav aria-label="Learning navigation" className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-[var(--border)] bg-[color-mix(in_oklab,var(--surface)_94%,transparent)] px-2 py-2 backdrop-blur-xl md:hidden">
+          {links.slice(0, 5).map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || (href !== "/learn" && pathname.startsWith(href));
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex min-w-12 flex-col items-center gap-1 rounded-lg px-2 py-1 text-[14px]", active ? "text-[var(--accent-2)]" : "text-[var(--muted)]")}><Icon className="h-5 w-5" /><span>{label}</span></Link>;
+          })}
+        </nav>
       </div>
     </div>
   );

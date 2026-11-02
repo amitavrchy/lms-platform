@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { CheckCircle2, Circle, Play } from "lucide-react";
+import { CheckCircle2, Circle, Clock3, FileCheck2, Play, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
@@ -88,22 +88,24 @@ export default function CourseOutlinePage() {
     onError: () => toast.error("Checkout is unavailable right now"),
   });
 
-  if (isLoading || !course) {
+  if (isLoading) {
     return <div className="h-64 animate-pulse rounded-2xl bg-[var(--surface)]" />;
   }
+  if (!course) return <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-[14px] text-[var(--muted)]">This course is unavailable. Return to the catalog to choose another learning path.</div>;
 
   const firstLesson = course.modules.flatMap((m) => m.lessons)[0];
+  const lessonCount = course.modules.reduce((count, module) => count + module.lessons.length, 0);
   const entitlement = entitlementQuery.data && typeof entitlementQuery.data === "object" ? entitlementQuery.data as Record<string, unknown> : {};
   const status = typeof entitlement.status === "string" ? entitlement.status : course.enrolled ? "Active enrollment" : "Enrollment required";
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="mb-3 flex flex-wrap gap-2">
           {course.level && <Badge tone="accent">{course.level}</Badge>}
           <Badge>{course.durationMins} mins</Badge>
         </div>
-        <h1 className="font-[family-name:var(--font-display)] text-[32px] font-bold tracking-tight">
+        <div className="rounded-3xl border border-[var(--border)] bg-gradient-to-br from-[color-mix(in_oklab,var(--accent)_18%,var(--surface))] via-[var(--surface)] to-[color-mix(in_oklab,var(--accent-2)_12%,var(--surface))] p-6 sm:p-8"><h1 className="font-[family-name:var(--font-display)] text-[32px] font-bold tracking-tight">
           {course.title}
         </h1>
         {course.subtitle && <p className="mt-2 text-[16px] text-[var(--muted)]">{course.subtitle}</p>}
@@ -113,7 +115,8 @@ export default function CourseOutlinePage() {
             <p className="mt-2 text-[14px] text-[var(--muted)]">{course.progressPercent ?? 0}% complete</p>
           </div>
         )}
-        <p className="mt-3 text-[14px] text-[var(--muted)]">Course access: <span className="font-medium text-[var(--text)]">{status}</span></p>
+        <div className="mt-5 grid gap-3 text-[14px] text-[var(--muted)] sm:grid-cols-3"><span className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[var(--accent-2)]" />{course.durationMins} minutes of focused study</span><span className="flex items-center gap-2"><FileCheck2 className="h-4 w-4 text-[var(--accent-2)]" />{lessonCount} lessons across {course.modules.length} modules</span><span className="flex items-center gap-2"><Trophy className="h-4 w-4 text-[var(--accent-2)]" />Progress and assessment tracked</span></div>
+        <p className="mt-4 text-[14px] text-[var(--muted)]">Course access: <span className="font-medium text-[var(--text)]">{status}</span></p>
         <div className="mt-6 flex flex-wrap gap-3">
           {course.enrolled ? (
             firstLesson && (
@@ -132,7 +135,7 @@ export default function CourseOutlinePage() {
               {Boolean(entitlement.requiresPurchase ?? entitlement.purchasable) && <Button variant="secondary" onClick={() => checkout.mutate()} disabled={checkout.isPending}>{checkout.isPending ? "Opening checkout…" : "Get access"}</Button>}
             </>
           )}
-        </div>
+        </div></div>
       </motion.div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -150,9 +153,9 @@ export default function CourseOutlinePage() {
               transition={{ delay: mi * 0.05 }}
               className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
             >
-              <h2 className="text-[16px] font-semibold">
+              <div className="flex items-center justify-between gap-3"><h2 className="text-[16px] font-semibold">
                 Module {mi + 1}: {mod.title}
-              </h2>
+              </h2><span className="text-[14px] text-[var(--muted)]">{mod.lessons.length} lesson{mod.lessons.length === 1 ? "" : "s"}</span></div>
               {locked ? <LockedModuleState availableAt={mod.availableAt ?? mod.releaseAt} /> : <ul className="mt-4 space-y-2">
                 {mod.lessons
                   .slice()
@@ -179,7 +182,7 @@ export default function CourseOutlinePage() {
                           <Circle className="h-4 w-4 text-[var(--muted)]" />
                         )}
                         <span className="flex-1">{lesson.title}</span>
-                        <Badge tone="default">{lesson.type}</Badge>
+                        <span className="hidden text-[14px] text-[var(--muted)] sm:inline">{Math.max(1, Math.round(lesson.durationSec / 60))} min</span><Badge tone="default">{lesson.type}</Badge>
                       </Link>
                     </li>
                   ))}

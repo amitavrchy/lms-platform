@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const plans = [
@@ -31,11 +31,12 @@ export default function PricingPage() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-16">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="font-[family-name:var(--font-display)] text-[36px] font-bold tracking-tight">
-          Simple pricing
+        <p className="text-[14px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-2)]">For learning teams with standards</p>
+        <h1 className="mt-3 font-[family-name:var(--font-display)] text-[36px] font-bold tracking-tight">
+          Invest in completion, not more content.
         </h1>
         <p className="mt-3 max-w-xl text-[16px] text-[var(--muted)]">
-          Start free. Upgrade when your academy needs deeper analytics and AI tooling.
+          A clear starting point for every academy. Upgrade when your programmes need cohort operations, evidence, and deeper insight.
         </p>
       </motion.div>
 
@@ -76,6 +77,7 @@ export default function PricingPage() {
           </motion.div>
         ))}
       </div>
+      <div className="mt-10 grid gap-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:grid-cols-2"><p className="flex gap-3 text-[14px] text-[var(--muted)]"><ShieldCheck className="h-5 w-5 shrink-0 text-[var(--success)]" />Every plan includes a learning record, structured curriculum delivery, and a focused learner workspace.</p><p className="flex gap-3 text-[14px] text-[var(--muted)]"><Sparkles className="h-5 w-5 shrink-0 text-[var(--xp)]" />AI support is grounded in enrolled course material—designed to help learners think, not bypass the work.</p></div>
     </div>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Focus, Sparkles } from "lucide-react";
+import { ClipboardPenLine, Focus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { api } from "@/lib/api";
@@ -49,6 +49,7 @@ export default function LessonPlayerPage() {
   const focusMode = useAppSelector((s) => s.playerUi.focusMode);
   const playbackRate = useAppSelector((s) => s.playerUi.playbackRate);
   const lastSaved = useRef(0);
+  const [notes, setNotes] = useState("");
 
   const lessonQuery = useQuery({
     queryKey: ["lesson", lessonId],
@@ -115,6 +116,15 @@ export default function LessonPlayerPage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, next, router, slug]);
+
+  useEffect(() => {
+    setNotes(window.localStorage.getItem(`learnora-notes-${lessonId}`) ?? "");
+  }, [lessonId]);
+
+  function saveNotes(value: string) {
+    setNotes(value);
+    window.localStorage.setItem(`learnora-notes-${lessonId}`, value);
+  }
 
   if (lessonQuery.isLoading || !lesson) {
     return <div className="h-96 animate-pulse rounded-2xl bg-[var(--surface)]" />;
@@ -192,7 +202,7 @@ export default function LessonPlayerPage() {
           hasNext={Boolean(next)}
           onNext={() => next && router.push(`/learn/courses/${slug}/lessons/${next.id}`)}
         />
-        {!focusMode && <LessonResources objectives={lesson.objectives} transcript={lesson.transcript} resources={lesson.resources} />}
+        {!focusMode && <section className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]"><LessonResources objectives={lesson.objectives} transcript={lesson.transcript} resources={lesson.resources} /><aside className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"><h2 className="flex items-center gap-2 text-[16px] font-semibold"><ClipboardPenLine className="h-4 w-4 text-[var(--accent-2)]" /> Study notes</h2><p className="mt-1 text-[14px] text-[var(--muted)]">Private to this browser · capture an idea before you move on.</p><label className="sr-only" htmlFor="lesson-notes">Notes for {lesson.title}</label><textarea id="lesson-notes" value={notes} onChange={(event) => saveNotes(event.target.value)} placeholder="What is worth remembering?" className="mt-4 min-h-36 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[14px] text-[var(--text)] placeholder:text-[var(--muted)]" /></aside></section>}
         {!focusMode && <DiscussionPanel courseId={lesson.module.course.id} lessonId={lessonId} />}
       </div>
 
