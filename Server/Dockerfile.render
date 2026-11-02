@@ -5,7 +5,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     POSTGRES_USER=learnora \
     POSTGRES_PASSWORD=learnora \
     POSTGRES_DB=learnora \
-    NODE_ENV=production \
     PORT=10000 \
     NODE_OPTIONS=--max-old-space-size=192
 
@@ -20,11 +19,15 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
 
 COPY . .
-RUN npx prisma generate && npm run build \
-  && chmod +x /app/docker-entrypoint-render.sh
+RUN npx prisma generate \
+  && npm run build \
+  && chmod +x /app/docker-entrypoint-render.sh \
+  && npm prune --omit=dev
+
+ENV NODE_ENV=production
 
 EXPOSE 10000
 ENTRYPOINT ["/app/docker-entrypoint-render.sh"]
