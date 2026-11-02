@@ -1,6 +1,6 @@
 # Learnora LMS
 
-Production-oriented creator & cohort LMS — **Finish what you start.**
+Production-oriented academic and cohort LMS — **Finish what you start.**
 
 ## Stack
 
@@ -55,26 +55,49 @@ uvicorn app.main:app --reload --port 8002
 
 Without `OPENAI_API_KEY`, the AI service returns structured mock responses so Nest can still integrate.
 
+## Academic demo academy
+
+`npx prisma db seed` creates a presentation-ready academy rather than placeholder data:
+
+- 4 published academic courses, 1 draft workshop, 14 modules, and 42 substantive lessons.
+- Academic Success Lab, Research Methods Foundations, Critical Thinking & Argument, and Study Systems & Wellbeing.
+- 2 learning paths, 2 cohort runs, 5 live-session agenda entries, announcements, course Q&A, preferences, learner activity variation, and realistic analytics signals.
+- Course content includes outcomes, worked examples, reflection prompts, practice exercises, checklists, transcripts, and resource links.
+- 4 server-graded quizzes and multiple learner states: active, at-risk, zero-progress, and complete/certified.
+
 ## Demo accounts
 
 Password for all: `Password123!`
 
 | Email | Role |
 |-------|------|
-| `learner@learnora.dev` | LEARNER |
-| `instructor@learnora.dev` | INSTRUCTOR |
-| `admin@learnora.dev` | ADMIN |
-| `owner@learnora.dev` | OWNER |
-| `ta@learnora.dev` | TA |
+| `priya.nair@learnora.dev` | LEARNER |
+| `dr.anya.shah@learnora.dev` | INSTRUCTOR |
+| `marcus.admin@learnora.dev` | ADMIN |
+| `olivia.owner@learnora.dev` | OWNER |
+| `jordan.ta@learnora.dev` | TA |
 
 Org slug: `learnora`
 
 ## Product surfaces
 
 - `/` marketing · `/courses` catalog · `/login` `/register`
-- `/learn` learner home, player, quizzes, streaks, certificates
-- `/studio` curriculum builder, analytics, AI tools
+- `/learn` learner home, player, quizzes, streaks, certificates, cohorts, announcements, and course Q&A
+- `/studio` curriculum builder, cohorts, community moderation, analytics, and AI tools
 - `/admin` members, assign courses, reports
+
+## Commerce integration
+
+The commerce API is intentionally safe by default. It supports entitlement status, Stripe Checkout, customer portal, and verified webhooks, but returns an explicit unavailable state until the following are configured:
+
+```env
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_ID=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+```
+
+Never enable a production webhook without its signing secret. Free/demo enrollment continues to work without Stripe.
 
 ## Design rules
 
