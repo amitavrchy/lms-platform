@@ -38,33 +38,66 @@ enum EnrollmentStatus {
   REVOKED
 }
 
+enum CohortStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum DiscussionStatus {
+  OPEN
+  RESOLVED
+  LOCKED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum EntitlementStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+}
+
 model Organization {
-  id        String         @id @default(cuid())
-  name      String
-  slug      String         @unique
-  logoUrl   String?
-  members   Membership[]
-  courses   Course[]
-  paths     LearningPath[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id            String              @id @default(cuid())
+  name          String
+  slug          String              @unique
+  logoUrl       String?
+  members       Membership[]
+  courses       Course[]
+  paths         LearningPath[]
+  cohorts       Cohort[]
+  announcements Announcement[]
+  discussions   DiscussionThread[]
+  entitlements  CourseEntitlement[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 }
 
 model User {
-  id           String           @id @default(cuid())
-  email        String           @unique
-  passwordHash String
-  name         String
-  avatarUrl    String?
-  memberships  Membership[]
-  enrollments  Enrollment[]
-  progress     LessonProgress[]
-  quizAttempts QuizAttempt[]
-  streak       UserStreak?
-  xpEvents     XpEvent[]
-  certificates Certificate[]
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id                     String                  @id @default(cuid())
+  email                  String                  @unique
+  passwordHash           String
+  name                   String
+  avatarUrl              String?
+  memberships            Membership[]
+  enrollments            Enrollment[]
+  progress               LessonProgress[]
+  quizAttempts           QuizAttempt[]
+  streak                 UserStreak?
+  xpEvents               XpEvent[]
+  certificates           Certificate[]
+  discussionThreads      DiscussionThread[]      @relation("DiscussionAuthor")
+  discussionReplies      DiscussionReply[]
+  notificationPreference NotificationPreference?
+  announcementReads      AnnouncementRead[]
+  entitlements           CourseEntitlement[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
 }
 
 model Membership {
@@ -80,51 +113,59 @@ model Membership {
 }
 
 model Course {
-  id             String         @id @default(cuid())
+  id             String              @id @default(cuid())
   organizationId String
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   slug           String
   title          String
   subtitle       String?
   descriptionMd  String?
   coverUrl       String?
-  status         CourseStatus   @default(DRAFT)
+  status         CourseStatus        @default(DRAFT)
   level          String?
-  durationMins   Int            @default(0)
+  durationMins   Int                 @default(0)
   modules        Module[]
   enrollments    Enrollment[]
   certificates   Certificate[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  cohorts        Cohort[]
+  announcements  Announcement[]
+  discussions    DiscussionThread[]
+  entitlements   CourseEntitlement[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@unique([organizationId, slug])
   @@index([status])
 }
 
 model Module {
-  id        String   @id @default(cuid())
-  courseId  String
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title     String
-  sortOrder Int      @default(0)
-  lessons   Lesson[]
+  id                String   @id @default(cuid())
+  courseId          String
+  course            Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title             String
+  sortOrder         Int      @default(0)
+  releaseOffsetDays Int      @default(0)
+  lessons           Lesson[]
 
   @@index([courseId])
 }
 
 model Lesson {
-  id          String           @id @default(cuid())
-  moduleId    String
-  module      Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  title       String
-  slug        String
-  type        LessonType       @default(VIDEO)
-  contentMd   String?
-  videoUrl    String?
-  durationSec Int              @default(0)
-  sortOrder   Int              @default(0)
-  quiz        Quiz?
-  progress    LessonProgress[]
+  id                 String           @id @default(cuid())
+  moduleId           String
+  module             Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title              String
+  slug               String
+  type               LessonType       @default(VIDEO)
+  contentMd          String?
+  videoUrl           String?
+  resourceUrl        String?
+  transcriptMd       String?
+  learningObjectives String[]         @default([])
+  durationSec        Int              @default(0)
+  sortOrder          Int              @default(0)
+  quiz               Quiz?
+  progress           LessonProgress[]
 
   @@unique([moduleId, slug])
   @@index([moduleId])
@@ -137,8 +178,10 @@ model Enrollment {
   status      EnrollmentStatus @default(ACTIVE)
   enrolledAt  DateTime         @default(now())
   completedAt DateTime?
+  cohortId    String?
   course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cohort      Cohort?          @relation(fields: [cohortId], references: [id], onDelete: SetNull)
 
   @@unique([courseId, userId])
   @@index([userId])
@@ -253,4 +296,137 @@ model ContentChunkMeta {
 
   @@index([lessonId])
   @@index([courseId])
+}
+
+model Cohort {
+  id             String          @id @default(cuid())
+  organizationId String
+  courseId       String
+  name           String
+  slug           String
+  description    String?
+  status         CohortStatus    @default(UPCOMING)
+  timezone       String          @default("UTC")
+  startsAt       DateTime
+  endsAt         DateTime?
+  meetingUrl     String?
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  course         Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  sessions       CohortSession[]
+  enrollments    Enrollment[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([organizationId, slug])
+  @@index([courseId, status])
+}
+
+model CohortSession {
+  id          String   @id @default(cuid())
+  cohortId    String
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime
+  meetingUrl  String?
+  cohort      Cohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([cohortId, startsAt])
+}
+
+model Announcement {
+  id             String             @id @default(cuid())
+  organizationId String
+  courseId       String?
+  title          String
+  bodyMd         String
+  publishedAt    DateTime?
+  authorId       String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  course         Course?            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  reads          AnnouncementRead[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([organizationId, publishedAt])
+  @@index([courseId, publishedAt])
+}
+
+model AnnouncementRead {
+  id             String              @id @default(cuid())
+  announcementId String
+  userId         String
+  channel        NotificationChannel @default(IN_APP)
+  readAt         DateTime            @default(now())
+  announcement   Announcement        @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+}
+
+model DiscussionThread {
+  id             String            @id @default(cuid())
+  organizationId String
+  courseId       String
+  lessonId       String?
+  authorId       String
+  title          String
+  bodyMd         String
+  status         DiscussionStatus  @default(OPEN)
+  pinned         Boolean           @default(false)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  course         Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  author         User              @relation("DiscussionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  replies        DiscussionReply[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([courseId, status, createdAt])
+  @@index([lessonId])
+}
+
+model DiscussionReply {
+  id        String           @id @default(cuid())
+  threadId  String
+  authorId  String
+  bodyMd    String
+  staffOnly Boolean          @default(false)
+  thread    DiscussionThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author    User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([threadId, createdAt])
+}
+
+model NotificationPreference {
+  userId                String   @id
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailAnnouncements    Boolean  @default(true)
+  emailSessionReminders Boolean  @default(true)
+  inAppAnnouncements    Boolean  @default(true)
+  reminderLeadHours     Int      @default(24)
+  updatedAt             DateTime @updatedAt
+}
+
+model CourseEntitlement {
+  id                      String            @id @default(cuid())
+  organizationId          String
+  courseId                String
+  userId                  String
+  status                  EntitlementStatus @default(ACTIVE)
+  source                  String            @default("MANUAL")
+  stripeCustomerId        String?
+  stripeSubscriptionId    String?           @unique
+  stripeCheckoutSessionId String?           @unique
+  expiresAt               DateTime?
+  organization            Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  course                  Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user                    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  @@unique([courseId, userId])
+  @@index([userId, status])
 }
